@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HRIS - Omah Visual LED</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* Styling Tambahan untuk Kelancaran UI */
+    body { background-color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .hidden-view { display: none !important; }
+    .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3b82f6; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+  <!-- ========================================== -->
+  <!-- 1. HALAMAN LOGIN -->
+  <!-- ========================================== -->
+  <div id="loginView" class="min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
+      <div class="text-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">HRIS Portal</h1>
+        <p class="text-sm text-gray-500">Omah Visual LED</p>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Username</label>
+          <input type="text" id="loginUsername" class="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Masukkan Username">
+        </div>
+        <div class="relative">
+          <label class="block text-sm font-medium text-gray-700">PIN</label>
+          <input type="password" id="loginPin" class="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Masukkan PIN">
+          <button type="button" onclick="togglePassword()" class="absolute right-3 top-8 text-gray-500 hover:text-gray-700">👁️</button>
+        </div>
+        <button id="btnLogin" onclick="doLogin()" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-semibold transition mt-4">
+          Masuk
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 2. HALAMAN KARYAWAN / USER -->
+  <!-- ========================================== -->
+  <div id="employeeView" class="hidden-view min-h-screen bg-gray-50">
+    <div class="bg-blue-600 text-white p-4 shadow-md flex justify-between items-center">
+      <div>
+        <h2 class="text-lg font-bold">Halo, <span id="empName">Karyawan</span>!</h2>
+        <p class="text-xs text-blue-100">Panel Absensi Omah Visual</p>
+      </div>
+      <button onclick="logout()" class="bg-red-500 hover:bg-red-600 px-3 py-1 rounded text-sm font-semibold">Keluar</button>
+    </div>
+
+    <div class="p-4 max-w-md mx-auto space-y-4">
+      
+      <!-- Tombol Navigasi Utama -->
+      <div class="grid grid-cols-2 gap-3" id="menuUtama">
+        <button onclick="bukaFormAbsen('Masuk')" class="bg-white p-4 rounded-xl shadow border-l-4 border-blue-500 text-left hover:bg-gray-50">
+          <span class="text-2xl block mb-1">🏢</span>
+          <span class="font-bold text-gray-800">Absen Masuk</span>
+        </button>
+        <button onclick="bukaFormAbsen('Pulang')" class="bg-white p-4 rounded-xl shadow border-l-4 border-green-500 text-left hover:bg-gray-50">
+          <span class="text-2xl block mb-1">🏠</span>
+          <span class="font-bold text-gray-800">Absen Pulang</span>
+        </button>
+        <button onclick="bukaFormAbsen('Pemasangan')" class="bg-white p-4 rounded-xl shadow border-l-4 border-orange-500 text-left hover:bg-gray-50">
+          <span class="text-2xl block mb-1">🛠️</span>
+          <span class="font-bold text-gray-800">Pemasangan</span>
+        </button>
+        <button onclick="bukaFormAbsen('Izin')" class="bg-white p-4 rounded-xl shadow border-l-4 border-red-500 text-left hover:bg-gray-50">
+          <span class="text-2xl block mb-1">💊</span>
+          <span class="font-bold text-gray-800">Izin / Sakit</span>
+        </button>
+      </div>
+
+      <!-- Formulir Absensi Dinamis -->
+      <div id="formAbsensi" class="hidden-view bg-white p-5 rounded-xl shadow space-y-4">
+        <div class="flex justify-between items-center mb-2">
+          <h3 class="font-bold text-lg" id="judulForm">Form Absen</h3>
+          <button onclick="batalAbsen()" class="text-gray-400 hover:text-red-500">✖</button>
+        </div>
+
+        <!-- Indikator GPS -->
+        <div id="gpsStatus" class="p-3 bg-gray-100 rounded-lg text-sm text-center font-medium">
+          📍 Memeriksa Lokasi...
+        </div>
+
+        <!-- Tombol Buka Kamera (Native) -->
+        <label class="block w-full bg-blue-100 text-blue-700 text-center py-3 rounded-lg font-semibold cursor-pointer border border-blue-300">
+          📸 Buka Kamera
+          <input type="file" accept="image/*" capture="user" id="kameraInput" class="hidden" onchange="prosesKamera(event)">
+        </label>
+        
+        <!-- Preview Foto -->
+        <canvas id="canvasFoto" class="hidden-view w-full rounded-lg border"></canvas>
+        <input type="hidden" id="fotoBase64">
+
+        <!-- Input Dinamis (Berubah sesuai tombol) -->
+        <div id="dynamicInputContainer" class="space-y-3">
+          <!-- Diisi otomatis oleh JavaScript -->
+        </div>
+
+        <button id="btnKirimAbsen" onclick="kirimAbsen()" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 disabled:opacity-50">
+          Kirim Data
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 3. HALAMAN ADMIN (DASHBOARD) -->
+  <!-- ========================================== -->
+  <div id="adminView" class="hidden-view min-h-screen bg-gray-100 flex">
+    <!-- Sidebar Admin -->
+    <div class="w-64 bg-gray-900 text-white min-h-screen p-4 flex flex-col">
+      <h2 class="text-xl font-bold mb-8 text-center border-b border-gray-700 pb-4">HR Control</h2>
+      <nav class="space-y-2 flex-grow">
+        <button class="w-full text-left p-3 bg-gray-800 rounded hover:bg-gray-700">📊 Dashboard Utama</button>
+        <button class="w-full text-left p-3 rounded hover:bg-gray-700">👥 Data Pegawai</button>
+        <button class="w-full text-left p-3 rounded hover:bg-gray-700">⏳ Verifikasi <span class="bg-red-500 text-xs px-2 py-1 rounded-full ml-2">Baru</span></button>
+        <button class="w-full text-left p-3 rounded hover:bg-gray-700">📑 Log Absensi</button>
+        <button class="w-full text-left p-3 rounded hover:bg-gray-700">⚙️ Pengaturan</button>
+      </nav>
+      <button onclick="logout()" class="mt-auto bg-red-600 p-3 rounded hover:bg-red-700 font-bold">Logout</button>
+    </div>
+
+    <!-- Main Content Admin -->
+    <div class="flex-1 p-8 overflow-y-auto">
+      <h1 class="text-2xl font-bold text-gray-800 mb-6">Dashboard Ringkasan</h1>
+      
+      <!-- Summary Cards -->
+      <div class="grid grid-cols-4 gap-4 mb-8">
+        <div class="bg-white p-4 rounded-lg shadow border-t-4 border-blue-500">
+          <p class="text-sm text-gray-500">Hadir Hari Ini</p>
+          <p class="text-2xl font-bold">13</p>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow border-t-4 border-gray-500">
+          <p class="text-sm text-gray-500">Belum Absen</p>
+          <p class="text-2xl font-bold">4</p>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow border-t-4 border-orange-500">
+          <p class="text-sm text-gray-500">Pemasangan (Event)</p>
+          <p class="text-2xl font-bold">3</p>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow border-t-4 border-red-500">
+          <p class="text-sm text-gray-500">Izin / Sakit</p>
+          <p class="text-2xl font-bold">1</p>
+        </div>
+      </div>
+
+      <!-- Area Kosong untuk Table & Chart yang akan dirender lewat backend nanti -->
+      <div class="bg-white p-6 rounded-lg shadow mb-6">
+        <h3 class="font-bold text-lg mb-4 text-gray-700">Reminder Masa Kontrak Magang</h3>
+        <p class="text-sm text-gray-500 italic">Data akan dimuat dari Google Sheets...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- JAVASCRIPT LOGIC -->
+  <!-- ========================================== -->
+  <script>
+    // ----------------------------------------------------
+    // VARIABEL GLOBAL & PENGATURAN
+    // ----------------------------------------------------
+    let currentUser = null;
+    let currentTipeLog = "";
+    let dataGPS = { lat: "", lng: "", jarak: 0, status: "" };
+    
+    const GUDANG_LAT = -7.918599; 
+    const GUDANG_LNG = 112.691436; 
+    const RADIUS_MAKSIMAL = 20; // dalam meter
+
+    // ----------------------------------------------------
+    // FUNGSI AUTO-LOGIN (PERSISTENT SESSION)
+    // ----------------------------------------------------
+    window.onload = function() {
+      const savedSession = localStorage.getItem("ov_user_session");
+      if (savedSession) {
+        currentUser = JSON.parse(savedSession);
+        masukKeDashboard(currentUser);
+      }
+    };
+
+    function masukKeDashboard(user) {
+      document.getElementById("loginView").classList.add("hidden-view");
+      if(user.role === "Admin" || user.role === "Developer") {
+        document.getElementById("adminView").classList.remove("hidden-view");
+      } else {
+        document.getElementById("empName").innerText = user.nama;
+        document.getElementById("employeeView").classList.remove("hidden-view");
+      }
+    }
+
+    // ----------------------------------------------------
+    // FUNGSI UTAMA (LOGIN & LOGOUT)
+    // ----------------------------------------------------
+    function togglePassword() {
+      const pinInput = document.getElementById("loginPin");
+      pinInput.type = (pinInput.type === "password") ? "text" : "password";
+    }
+
+    function getDeviceUUID() {
+      let uuid = localStorage.getItem("ov_device_uuid");
+      if (!uuid) {
+        uuid = 'device-' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        localStorage.setItem("ov_device_uuid", uuid);
+      }
+      return uuid;
+    }
+
+    function doLogin() {
+      const user = document.getElementById("loginUsername").value;
+      const pin = document.getElementById("loginPin").value;
+      
+      if(!user || !pin) return Swal.fire("Oops", "Username dan PIN harus diisi!", "warning");
+      
+      const btn = document.getElementById("btnLogin");
+      btn.innerHTML = `<div class="loader"></div>`;
+      btn.disabled = true;
+
+      const deviceId = getDeviceUUID();
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          btn.innerHTML = "Masuk";
+          btn.disabled = false;
+          
+          if(res.success) {
+            // Simpan sesi ke memori HP agar tidak ter-logout saat direfresh
+            localStorage.setItem("ov_user_session", JSON.stringify(res));
+            currentUser = res;
+            masukKeDashboard(res);
+          } else {
+            Swal.fire("Akses Ditolak", res.message, "error");
+          }
+        })
+        .withFailureHandler(function(err) {
+          btn.innerHTML = "Masuk";
+          btn.disabled = false;
+          Swal.fire("Koneksi Error", "Gagal menghubungi server.", "error");
+        })
+        .prosesLogin(user, pin, deviceId);
+    }
+
+    function logout() {
+      // Hapus data sesi dari HP saat user benar-benar klik tombol Logout
+      localStorage.removeItem("ov_user_session");
+      currentUser = null;
+      document.getElementById("loginUsername").value = "";
+      document.getElementById("loginPin").value = "";
+      batalAbsen();
+      
+      document.getElementById("employeeView").classList.add("hidden-view");
+      document.getElementById("adminView").classList.add("hidden-view");
+      document.getElementById("loginView").classList.remove("hidden-view");
+    }
+
+    // ----------------------------------------------------
+    // FUNGSI ABSENSI (SISI KARYAWAN)
+    // ----------------------------------------------------
+    function bukaFormAbsen(tipe) {
+      currentTipeLog = tipe;
+      document.getElementById("menuUtama").classList.add("hidden-view");
+      document.getElementById("formAbsensi").classList.remove("hidden-view");
+      document.getElementById("judulForm").innerText = "Absen: " + tipe;
+      
+      document.getElementById("canvasFoto").classList.add("hidden-view");
+      document.getElementById("fotoBase64").value = "";
+      document.getElementById("gpsStatus").innerText = "📍 Memeriksa Lokasi...";
+      document.getElementById("gpsStatus").className = "p-3 rounded-lg text-sm text-center font-medium bg-gray-100 text-gray-700";
+      
+      let dynamicHtml = "";
+      if (tipe === "Masuk") {
+        dynamicHtml = `<textarea id="inputKeterangan" class="w-full p-3 border rounded-lg" placeholder="Tuliskan Rencana Pekerjaan Hari Ini (Wajib)" required></textarea>`;
+      } else if (tipe === "Pulang") {
+        dynamicHtml = `<textarea id="inputKeterangan" class="w-full p-3 border rounded-lg" placeholder="Tuliskan Pekerjaan yang Diselesaikan (Wajib)" required></textarea>`;
+      } else if (tipe === "Izin") {
+        dynamicHtml = `
+          <select id="kategoriIzin" class="w-full p-3 border rounded-lg mb-2">
+            <option value="Sakit">Sakit</option>
+            <option value="Urusan Keluarga">Urusan Keluarga</option>
+            <option value="Urusan Kampus/Sekolah">Urusan Kampus/Sekolah</option>
+            <option value="Lainnya">Lainnya</option>
+          </select>
+          <textarea id="inputKeterangan" class="w-full p-3 border rounded-lg" placeholder="Jelaskan alasan detail (Wajib)" required></textarea>`;
+      } else if (tipe === "Pemasangan") {
+        dynamicHtml = `
+          <input type="text" id="namaEvent" class="w-full p-3 border rounded-lg mb-2" placeholder="Nama Client / Event (Wajib)" required>
+          <textarea id="inputKeterangan" class="w-full p-3 border rounded-lg" placeholder="Detail Pemasangan / Loading (Wajib)" required></textarea>`;
+      }
+      document.getElementById("dynamicInputContainer").innerHTML = dynamicHtml;
+
+      dapatkanLokasi();
+    }
+
+    function batalAbsen() {
+      document.getElementById("formAbsensi").classList.add("hidden-view");
+      document.getElementById("menuUtama").classList.remove("hidden-view");
+    }
+
+    function prosesKamera(event) {
+      const file = event.target.files[0];
+      if(!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.getElementById("canvasFoto");
+          const ctx = canvas.getContext("2d");
+          
+          const MAX_WIDTH = 800;
+          let width = img.width;
+          let height = img.height;
+          if (width > MAX_WIDTH) {
+            height = Math.round((height *= MAX_WIDTH / width));
+            width = MAX_WIDTH;
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          const base64String = canvas.toDataURL("image/jpeg", 0.6);
+          document.getElementById("fotoBase64").value = base64String;
+          canvas.classList.remove("hidden-view");
+        }
+        img.src = e.target.result;
+      }
+      reader.readAsDataURL(file);
+    }
+
+    function dapatkanLokasi() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            const jarak = hitungJarakMeter(lat, lng, GUDANG_LAT, GUDANG_LNG);
+            
+            dataGPS.lat = lat;
+            dataGPS.lng = lng;
+            dataGPS.jarak = Math.round(jarak);
+
+            const elStatus = document.getElementById("gpsStatus");
+            if(currentTipeLog === "Izin" || currentTipeLog === "Pemasangan") {
+              dataGPS.status = "Bypass";
+              elStatus.innerHTML = `📍 Mode Luar Gudang Aktif`;
+              elStatus.className = "p-3 rounded-lg text-sm text-center font-medium bg-blue-100 text-blue-800";
+            } else {
+              if (jarak <= RADIUS_MAKSIMAL) {
+                dataGPS.status = "Normal";
+                elStatus.innerHTML = `✅ Terdeteksi di Area Gudang (${Math.round(jarak)}m)`;
+                elStatus.className = "p-3 rounded-lg text-sm text-center font-medium bg-green-100 text-green-800";
+              } else {
+                dataGPS.status = "Luar Radius";
+                elStatus.innerHTML = `⚠️ Di Luar Radius Gudang (${Math.round(jarak)}m)`;
+                elStatus.className = "p-3 rounded-lg text-sm text-center font-medium bg-red-100 text-red-800";
+              }
+            }
+          },
+          (error) => {
+            document.getElementById("gpsStatus").innerHTML = "❌ Gagal mendapatkan akses GPS";
+            document.getElementById("gpsStatus").className = "p-3 rounded-lg text-sm text-center font-medium bg-red-100 text-red-800";
+          },
+          { enableHighAccuracy: true }
+        );
+      }
+    }
+
+    function hitungJarakMeter(lat1, lon1, lat2, lon2) {
+      const R = 6371e3; 
+      const φ1 = lat1 * Math.PI/180;
+      const φ2 = lat2 * Math.PI/180;
+      const Δφ = (lat2-lat1) * Math.PI/180;
+      const Δλ = (lon2-lon1) * Math.PI/180;
+      const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
+    function kirimAbsen() {
+      const foto = document.getElementById("fotoBase64").value;
+      if(!foto) return Swal.fire("Wajib Foto", "Silakan jepret foto bukti terlebih dahulu!", "warning");
+      
+      let keteranganTambahan = "";
+      if (currentTipeLog === "Izin") {
+        const kat = document.getElementById("kategoriIzin").value;
+        const ket = document.getElementById("inputKeterangan").value;
+        keteranganTambahan = `[${kat}] - ${ket}`;
+      } else if (currentTipeLog === "Pemasangan") {
+        const event = document.getElementById("namaEvent").value;
+        const ket = document.getElementById("inputKeterangan").value;
+        keteranganTambahan = `[Event: ${event}] - ${ket}`;
+      } else {
+        keteranganTambahan = document.getElementById("inputKeterangan").value;
+      }
+      
+      if(!keteranganTambahan || keteranganTambahan.trim() === "") {
+        return Swal.fire("Wajib Isi", "Kolom isian keterangan tidak boleh kosong!", "warning");
+      }
+
+      const payload = {
+        idKaryawan: currentUser.idKaryawan,
+        nama: currentUser.nama,
+        tipeLog: currentTipeLog,
+        fotoBase64: foto,
+        titikGPS: `${dataGPS.lat}, ${dataGPS.lng}`,
+        jarakMeter: dataGPS.jarak,
+        catatanSistem: dataGPS.status,
+        keterangan: keteranganTambahan
+      };
+
+      const btn = document.getElementById("btnKirimAbsen");
+      btn.innerHTML = `<div class="loader"></div> Mengirim...`;
+      btn.disabled = true;
+
+      google.script.run
+        .withSuccessHandler((res) => {
+          if(res.success) {
+            Swal.fire("Berhasil!", res.message, "success").then(() => {
+              // Hapus fungsi logout otomatis, ganti menjadi batalAbsen agar kembali ke menu utama
+              batalAbsen(); 
+            });
+          } else {
+            Swal.fire("Gagal", res.message, "error");
+            btn.innerHTML = "Kirim Data";
+            btn.disabled = false;
+          }
+        })
+        .withFailureHandler((err) => {
+          Swal.fire("Error", "Gagal menghubungi server", "error");
+          btn.innerHTML = "Kirim Data";
+          btn.disabled = false;
+        })
+        .simpanAbsensi(payload);
+    }
+  </script>
+</body>
+</html>
