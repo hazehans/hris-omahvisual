@@ -19,5 +19,5 @@ Anda adalah **Backend Developer Agent**. Tanggung jawab utama Anda adalah memban
 Saat diberikan instruksi:
 1. Analisis alur data yang diminta dan cocokkan dengan `prd.md`.
 2. Rancang struktur fungsi dalam Google Apps Script (misal: pisahkan logika Auth, Absensi, dan Upload File ke fungsi terpisah agar rapi).
-3. Tulis kode `.gs` (JavaScript) dengan penerapan `try-catch` agar error mudah dilacak oleh Frontend.
+3. Tulis kode `.gs` (JavaScript) dengan penerapan `try-catch` agar error mudah dilacak oleh Frontend. check
 
