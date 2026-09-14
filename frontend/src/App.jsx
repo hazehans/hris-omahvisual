@@ -11,109 +11,70 @@ import AppLayout from './components/layout/AppLayout';
 import AdminLayout from './components/layout/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 
-const PrivateRoute = ({ children, allowedRoles, blockRoles }) => {
-  const { user } = useAuth();
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/" replace />;
-  }
-  
-  if (blockRoles && blockRoles.includes(user.role)) {
-    return <Navigate to="/admin/dashboard" replace />;
-  }
+// ── Guards ─────────────────────────────────────────────────────────────────
 
+/** Redirect to login if not authenticated. */
+const RequireAuth = ({ children }) => {
+  const { user } = useAuth();
+  return user ? children : <Navigate to="/login" replace />;
+};
+
+/** Restrict to specific roles. */
+const RequireRole = ({ children, roles }) => {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  if (!roles.includes(user.role)) return <Navigate to="/" replace />;
   return children;
 };
 
-// Custom route for root "/" to redirect admin to /admin/dashboard
-const RootRoute = () => {
+/** Smart root redirect based on role. */
+const RootRedirect = () => {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
-  if (user.role === 'ADMIN_HR') {
-    return <Navigate to="/admin/dashboard" replace />;
-  }
-  return (
-    <AppLayout>
-      <DashboardKaryawan />
-    </AppLayout>
-  );
+  return user.role === 'ADMIN_HR'
+    ? <Navigate to="/admin/dashboard" replace />
+    : (
+      <AppLayout>
+        <DashboardKaryawan />
+      </AppLayout>
+    );
 };
 
-const AppRoutes = () => {
-  return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      
-      {/* Karyawan Routes */}
-      <Route path="/" element={<RootRoute />} />
-      <Route
-        path="/absensi"
-        element={
-          <PrivateRoute blockRoles={['ADMIN_HR']}>
-            <AppLayout>
-              <AbsensiPage />
-            </AppLayout>
-          </PrivateRoute>
-        }
-      />
-      <Route
-        path="/daily-report"
-        element={
-          <PrivateRoute blockRoles={['ADMIN_HR']}>
-            <AppLayout>
-              <DailyReportPage />
-            </AppLayout>
-          </PrivateRoute>
-        }
-      />
-      <Route
-        path="/izin-cuti"
-        element={
-          <PrivateRoute blockRoles={['ADMIN_HR']}>
-            <AppLayout>
-              <IzinCutiPage />
-            </AppLayout>
-          </PrivateRoute>
-        }
-      />
-      <Route
-        path="/profil"
-        element={
-          <PrivateRoute blockRoles={['ADMIN_HR']}>
-            <AppLayout>
-              <ProfilPage />
-            </AppLayout>
-          </PrivateRoute>
-        }
-      />
+// ── Routes ─────────────────────────────────────────────────────────────────
+const AppRoutes = () => (
+  <Routes>
+    <Route path="/login" element={<LoginPage />} />
 
-      {/* Admin Routes */}
-      <Route
-        path="/admin/dashboard"
-        element={
-          <PrivateRoute allowedRoles={['ADMIN_HR']}>
-            <AdminLayout>
-              <AdminDashboard />
-            </AdminLayout>
-          </PrivateRoute>
-        }
-      />
-      {/* Add more admin routes here later */}
-    </Routes>
-  );
-};
+    {/* Root: smart redirect for Admin vs Karyawan */}
+    <Route path="/" element={<RootRedirect />} />
 
-const App = () => {
-  return (
-    <AuthProvider>
-      <Router>
-        <AppRoutes />
-      </Router>
-    </AuthProvider>
-  );
-};
+    {/* Karyawan pages */}
+    <Route path="/absensi" element={<RequireAuth><AppLayout><AbsensiPage /></AppLayout></RequireAuth>} />
+    <Route path="/daily-report" element={<RequireAuth><AppLayout><DailyReportPage /></AppLayout></RequireAuth>} />
+    <Route path="/izin-cuti" element={<RequireAuth><AppLayout><IzinCutiPage /></AppLayout></RequireAuth>} />
+    <Route path="/profil" element={<RequireAuth><AppLayout><ProfilPage /></AppLayout></RequireAuth>} />
+
+    {/* Admin pages */}
+    <Route
+      path="/admin/dashboard"
+      element={
+        <RequireRole roles={['ADMIN_HR']}>
+          <AdminLayout><AdminDashboard /></AdminLayout>
+        </RequireRole>
+      }
+    />
+
+    {/* Catch-all */}
+    <Route path="*" element={<Navigate to="/" replace />} />
+  </Routes>
+);
+
+const App = () => (
+  <AuthProvider>
+    <Router>
+      <AppRoutes />
+    </Router>
+  </AuthProvider>
+);
 
 export default App;

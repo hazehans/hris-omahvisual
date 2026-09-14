@@ -3,18 +3,22 @@ import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import LiveCamera from '../components/LiveCamera';
 import { useNavigate } from 'react-router-dom';
+import { MapPin, Loader2, CheckCircle } from 'lucide-react';
 
 const AbsensiPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+
   const [ledMode, setLedMode] = useState(false);
   const [photo, setPhoto] = useState(null);
   const [location, setLocation] = useState(null);
+  const [locStatus, setLocStatus] = useState('idle'); // idle | loading | success | error
   const [locError, setLocError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [todayStatus, setTodayStatus] = useState(null);
 
-  // Derived requirements based on role
+  // Role flags
   const role = user?.role || '';
   const isCV = role.startsWith('CV_') || role.startsWith('LED_');
   const isRental = role.startsWith('RENTAL_');
@@ -23,128 +27,178 @@ const AbsensiPage = () => {
   const reqLocation = !isCrew;
   const reqPhoto = isCrew || isRental || (isCV && ledMode);
 
+  // Fetch today status to show clock-in / clock-out button appropriately
   useEffect(() => {
-    if (reqLocation) {
-      if (!navigator.geolocation) {
-        setLocError('Geolocation tidak didukung oleh browser Anda.');
-        return;
-      }
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setLocation({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          });
-          setLocError(null);
-        },
-        (err) => {
-          console.error(err);
-          setLocError('Gagal mendapatkan lokasi. Pastikan izin lokasi (GPS) diaktifkan di browser/perangkat Anda.');
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-      );
+    api.get('/attendance/today/')
+      .then((res) => setTodayStatus(res.data?.data ?? res.data))
+      .catch(() => setTodayStatus(null));
+  }, []);
+
+  // Request geolocation
+  useEffect(() => {
+    if (!reqLocation) return;
+    setLocStatus('loading');
+    if (!navigator.geolocation) {
+      setLocStatus('error');
+      setLocError('Geolocation tidak didukung oleh browser Anda.');
+      return;
     }
-  }, [reqLocation]);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+        setLocStatus('success');
+        setLocError(null);
+      },
+      (err) => {
+        setLocStatus('error');
+        if (err.code === 1) {
+          setLocError('Izin lokasi ditolak. Buka Pengaturan Browser → Izin Situs → aktifkan Lokasi, lalu muat ulang halaman.');
+        } else if (err.code === 2) {
+          setLocError('Posisi tidak tersedia. Pastikan GPS aktif.');
+        } else {
+          setLocError('Gagal mendapatkan lokasi (timeout). Coba lagi.');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+    );
+  }, [reqLocation, ledMode]);
+
+  const hasClockIn = !!todayStatus?.clock_in_time;
+  const hasClockOut = !!todayStatus?.clock_out_time;
 
   const handleSubmit = async (type) => {
-    // Validation
-    if (reqLocation && !location) {
-      setError('Lokasi wajib ada. Mohon aktifkan GPS.');
+    setError(null);
+
+    if (reqLocation && locStatus !== 'success') {
+      setError('Lokasi belum berhasil didapatkan. Mohon tunggu atau aktifkan GPS.');
       return;
     }
     if (reqPhoto && !photo) {
-      setError('Foto wajib disertakan.');
+      setError('Foto wajib disertakan untuk role Anda.');
       return;
     }
 
     setSubmitting(true);
-    setError(null);
-
-    const payload = {
-      type, // 'clock_in' or 'clock_out' (or handle endpoints separately depending on backend API)
-      led_mode: isCV ? ledMode : undefined,
-    };
-
-    if (location) {
-      payload.latitude = location.latitude;
-      payload.longitude = location.longitude;
-    }
-
-    if (photo) {
-      payload.photo_base64 = photo;
-    }
-
     try {
+      const payload = {
+        ...(isCV && { led_mode: ledMode }),
+        ...(location && { latitude: location.latitude, longitude: location.longitude }),
+        ...(photo && { photo_base64: photo }),
+      };
+
       const endpoint = type === 'clock_in' ? '/attendance/clock-in/' : '/attendance/clock-out/';
       await api.post(endpoint, payload);
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Terjadi kesalahan saat absensi.');
+      const msg =
+        err.response?.data?.errors?.non_field_errors?.[0] ||
+        err.response?.data?.message ||
+        err.message ||
+        'Terjadi kesalahan saat absensi.';
+      setError(msg);
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">Form Absensi</h2>
-        
-        {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded-md mb-4 text-sm">
-            {error}
-          </div>
-        )}
+    <div className="space-y-4">
+      <h2 className="text-xl font-bold text-gray-800">Form Absensi</h2>
 
+      {hasClockIn && hasClockOut && (
+        <div className="bg-green-50 border border-green-200 text-green-700 rounded-xl p-4 text-sm font-medium">
+          ✓ Absensi hari ini sudah lengkap (Clock In &amp; Clock Out).
+        </div>
+      )}
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl p-4 text-sm">
+          {error}
+        </div>
+      )}
+
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-5">
+        {/* Toggle Mode LED (hanya untuk role CV/LED) */}
         {isCV && (
-          <div className="mb-4 flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+          <div className="flex items-center justify-between p-4 bg-blue-50 rounded-xl">
             <div>
-              <p className="font-medium text-gray-800">Mode LED</p>
-              <p className="text-xs text-gray-500">Aktifkan saat pemasangan LED</p>
+              <p className="font-semibold text-gray-800 text-sm">Mode Pemasangan LED</p>
+              <p className="text-xs text-gray-500">Aktifkan saat tugas di lokasi LED</p>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" className="sr-only peer" checked={ledMode} onChange={(e) => setLedMode(e.target.checked)} />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-            </label>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={ledMode}
+              onClick={() => setLedMode((v) => !v)}
+              className={`relative w-11 h-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                ledMode ? 'bg-blue-600' : 'bg-gray-300'
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                  ledMode ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
           </div>
         )}
 
-        <div className="space-y-6">
-          {reqLocation && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Lokasi Saat Ini <span className="text-red-500">*</span>
-              </label>
-              {locError ? (
-                <p className="text-sm text-red-500 bg-red-50 p-2 rounded">{locError}</p>
-              ) : location ? (
-                <p className="text-sm text-green-600 bg-green-50 p-2 rounded">
-                  Lokasi berhasil didapatkan: {location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}
-                </p>
-              ) : (
-                <p className="text-sm text-gray-500">Mencari lokasi...</p>
-              )}
+        {/* Lokasi */}
+        {reqLocation && (
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Lokasi Saat Ini <span className="text-red-500">*</span>
+            </label>
+            <div className={`flex items-start gap-3 p-3 rounded-xl text-sm ${
+              locStatus === 'success' ? 'bg-green-50 text-green-700' :
+              locStatus === 'error' ? 'bg-red-50 text-red-600' :
+              'bg-gray-50 text-gray-500'
+            }`}>
+              {locStatus === 'loading' && <Loader2 size={18} className="animate-spin shrink-0 mt-0.5" />}
+              {locStatus === 'success' && <CheckCircle size={18} className="shrink-0 mt-0.5 text-green-500" />}
+              {locStatus === 'error' && <MapPin size={18} className="shrink-0 mt-0.5 text-red-500" />}
+              {locStatus === 'idle' && <MapPin size={18} className="shrink-0 mt-0.5" />}
+              <span>
+                {locStatus === 'loading' && 'Mendapatkan lokasi...'}
+                {locStatus === 'success' && `Lat: ${location.latitude.toFixed(5)}, Lng: ${location.longitude.toFixed(5)}`}
+                {locStatus === 'error' && locError}
+                {locStatus === 'idle' && 'Menunggu...'}
+              </span>
             </div>
-          )}
+          </div>
+        )}
 
-          <LiveCamera onCapture={setPhoto} required={reqPhoto} />
+        {/* Kamera Live */}
+        <LiveCamera onCapture={setPhoto} required={reqPhoto} />
 
-          <div className="flex gap-3 pt-4 border-t">
+        {/* Tombol Clock In / Clock Out */}
+        <div className="flex gap-3 pt-2">
+          {!hasClockIn && (
             <button
               onClick={() => handleSubmit('clock_in')}
               disabled={submitting}
-              className="flex-1 bg-blue-600 text-white py-3 rounded-md font-medium hover:bg-blue-700 disabled:opacity-50"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold py-3 rounded-xl transition-colors"
             >
-              Clock In
+              {submitting ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 size={16} className="animate-spin" /> Memproses...
+                </span>
+              ) : 'Clock In'}
             </button>
+          )}
+          {hasClockIn && !hasClockOut && (
             <button
               onClick={() => handleSubmit('clock_out')}
               disabled={submitting}
-              className="flex-1 bg-red-600 text-white py-3 rounded-md font-medium hover:bg-red-700 disabled:opacity-50"
+              className="flex-1 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white font-semibold py-3 rounded-xl transition-colors"
             >
-              Clock Out
+              {submitting ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 size={16} className="animate-spin" /> Memproses...
+                </span>
+              ) : 'Clock Out'}
             </button>
-          </div>
+          )}
         </div>
       </div>
     </div>
@@ -152,4 +206,3 @@ const AbsensiPage = () => {
 };
 
 export default AbsensiPage;
-

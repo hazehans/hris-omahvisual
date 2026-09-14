@@ -1,18 +1,22 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
+import { Loader2 } from 'lucide-react';
 
 const DailyReportPage = () => {
   const { user } = useAuth();
   const [reportText, setReportText] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState(null);
+  const [message, setMessage] = useState(null); // { type: 'success'|'error', text }
 
-  // Requirement: Crew doesn't have daily report
+  // Crew Gudang tidak perlu daily report
   if (user?.role === 'CREW_GUDANG') {
     return (
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 text-center">
-        <p className="text-gray-500">Role Anda (CREW) tidak memerlukan Daily Report.</p>
+      <div className="space-y-4">
+        <h2 className="text-xl font-bold text-gray-800">Laporan Harian</h2>
+        <div className="bg-gray-50 border border-gray-200 rounded-2xl p-8 text-center">
+          <p className="text-gray-400 text-sm">Role Crew Gudang tidak memerlukan Daily Report.</p>
+        </div>
       </div>
     );
   }
@@ -20,53 +24,62 @@ const DailyReportPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!reportText.trim()) return;
-    
+
     setSubmitting(true);
     setMessage(null);
-
     try {
       await api.post('/daily-report/', { report: reportText });
-      setMessage({ type: 'success', text: 'Daily report berhasil dikirim!' });
-      setReportText(''); // reset
+      setMessage({ type: 'success', text: 'Laporan harian berhasil dikirim!' });
+      setReportText('');
     } catch (err) {
-      setMessage({ type: 'error', text: err.response?.data?.message || 'Gagal mengirim report.' });
+      const msg = err.response?.data?.message || 'Gagal mengirim laporan.';
+      setMessage({ type: 'error', text: msg });
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">Laporan Harian (Daily Report)</h2>
-        
-        {message && (
-          <div className={`p-3 rounded-md mb-4 text-sm ${message.type === 'success' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
-            {message.text}
-          </div>
-        )}
+    <div className="space-y-4">
+      <h2 className="text-xl font-bold text-gray-800">Laporan Harian</h2>
 
+      {message && (
+        <div className={`rounded-xl p-4 text-sm border ${
+          message.type === 'success'
+            ? 'bg-green-50 border-green-200 text-green-700'
+            : 'bg-red-50 border-red-200 text-red-600'
+        }`}>
+          {message.text}
+        </div>
+      )}
+
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
               Kegiatan Hari Ini <span className="text-red-500">*</span>
             </label>
             <textarea
               required
-              rows="6"
-              className="w-full border border-gray-300 rounded-md p-3 focus:ring-blue-500 focus:border-blue-500"
+              rows={7}
+              className="w-full border border-gray-300 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               placeholder="Ceritakan aktivitas atau pekerjaan yang Anda lakukan hari ini..."
               value={reportText}
               onChange={(e) => setReportText(e.target.value)}
-            ></textarea>
+            />
+            <p className="text-xs text-gray-400 mt-1 text-right">{reportText.length} karakter</p>
           </div>
-          
+
           <button
             type="submit"
             disabled={submitting || !reportText.trim()}
-            className="w-full bg-blue-600 text-white py-3 rounded-md font-medium hover:bg-blue-700 disabled:opacity-50"
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-colors text-sm"
           >
-            {submitting ? 'Mengirim...' : 'Kirim Laporan'}
+            {submitting ? (
+              <span className="flex items-center justify-center gap-2">
+                <Loader2 size={16} className="animate-spin" /> Mengirim...
+              </span>
+            ) : 'Kirim Laporan'}
           </button>
         </form>
       </div>
@@ -75,4 +88,3 @@ const DailyReportPage = () => {
 };
 
 export default DailyReportPage;
-

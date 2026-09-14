@@ -7,13 +7,14 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Rehydrate from localStorage on first load
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
     const storedUser = localStorage.getItem('user_data');
-    if (token && storedUser) {
+    const token = localStorage.getItem('access_token');
+    if (storedUser && token) {
       try {
         setUser(JSON.parse(storedUser));
-      } catch (err) {
+      } catch {
         setUser(null);
       }
     }
@@ -21,24 +22,25 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (username, password) => {
-    const res = await api.post('/auth/login/', { 
-      username, 
+    // Backend wraps success in { status: 'success', data: {...} }
+    const res = await api.post('/auth/login/', {
+      username,
       password,
-      device_id: getDeviceId() 
+      device_id: getDeviceId(),
     });
-    
-    const { access, refresh, user: userData } = res.data.data;
+
+    const payload = res.data?.data ?? res.data; // handle both wrapped and bare
+    const { access, refresh, user: userData } = payload;
 
     localStorage.setItem('access_token', access);
     localStorage.setItem('refresh_token', refresh);
-    
-    // Normalize user data to easily access role
+
     const normalizedUser = {
       id: userData.id,
       username: userData.username,
-      employee_id: userData.employee?.id,
-      full_name: userData.employee?.full_name,
-      role: userData.employee?.role || 'ADMIN_HR',
+      employee_id: userData.employee?.id ?? null,
+      full_name: userData.employee?.full_name ?? userData.username,
+      role: userData.employee?.role ?? 'ADMIN_HR',
     };
 
     localStorage.setItem('user_data', JSON.stringify(normalizedUser));
@@ -47,13 +49,14 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      await api.post('/auth/logout/');
-    } catch (err) {
-      console.error(err);
+      const refresh = localStorage.getItem('refresh_token');
+      if (refresh) await api.post('/auth/logout/', { refresh });
+    } catch {
+      // ignore errors on logout
     }
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user_data');
+    ['access_token', 'refresh_token', 'user_data'].forEach((k) =>
+      localStorage.removeItem(k),
+    );
     setUser(null);
     window.location.href = '/login';
   };
