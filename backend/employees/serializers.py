@@ -36,17 +36,36 @@ class EmployeeListSerializer(serializers.ModelSerializer):
 
 class EmployeeDetailSerializer(serializers.ModelSerializer):
     """Serializer lengkap untuk detail & update karyawan."""
-    username = serializers.CharField(source='user.username', read_only=True)
+    username = serializers.CharField(source='user.username')
     role_display = serializers.CharField(source='get_role_display', read_only=True)
+    password = serializers.CharField(write_only=True, required=False, min_length=8)
 
     class Meta:
         model = Employee
         fields = [
-            'id', 'username', 'full_name', 'nik', 'role', 'role_display',
+            'id', 'username', 'password', 'full_name', 'nik', 'role', 'role_display',
             'department', 'phone', 'birth_date', 'photo', 'is_active',
             'created_at', 'updated_at',
         ]
-        read_only_fields = ['id', 'username', 'role_display', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'role_display', 'created_at', 'updated_at']
+
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop('user', {})
+        if 'username' in user_data:
+            new_username = user_data['username']
+            # Check for duplicate username
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            if User.objects.filter(username=new_username).exclude(id=instance.user.id).exists():
+                raise serializers.ValidationError({'username': 'Username sudah digunakan.'})
+            instance.user.username = new_username
+            instance.user.save()
+
+        password = validated_data.pop('password', None)
+        if password:
+            instance.user.set_password(password)
+            instance.user.save()
+        return super().update(instance, validated_data)
 
 
 class EmployeeCreateSerializer(serializers.Serializer):

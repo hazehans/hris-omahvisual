@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, Calendar, FileText, CheckSquare, BarChart, Users, FileBadge, LogOut } from 'lucide-react';
+import { LayoutDashboard, Calendar, FileText, CheckSquare, BarChart, Users, FileBadge, LogOut, MapPin } from 'lucide-react';
 
 const AdminLayout = ({ children }) => {
   const { logout, user } = useAuth();
@@ -15,6 +15,7 @@ const AdminLayout = ({ children }) => {
     { path: '/admin/laporan', label: 'Laporan', icon: BarChart },
     { path: '/admin/karyawan', label: 'Karyawan', icon: Users },
     { path: '/admin/kontrak', label: 'Kontrak', icon: FileBadge },
+    { path: '/admin/lokasi', label: 'Lokasi Kantor', icon: MapPin },
   ];
 
   return (

@@ -10,6 +10,13 @@ import ProfilPage from './pages/ProfilPage';
 import AppLayout from './components/layout/AppLayout';
 import AdminLayout from './components/layout/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import KaryawanPage from './pages/admin/KaryawanPage';
+import ActionCenterPage from './pages/admin/ActionCenterPage';
+import LogbookPage from './pages/admin/LogbookPage';
+import LaporanPage from './pages/admin/LaporanPage';
+import KontrakPage from './pages/admin/KontrakPage';
+import RosterPage from './pages/admin/RosterPage';
+import LokasiPage from './pages/admin/LokasiPage';
 
 // ── Guards ─────────────────────────────────────────────────────────────────
 
@@ -55,14 +62,14 @@ const AppRoutes = () => (
     <Route path="/profil" element={<RequireAuth><AppLayout><ProfilPage /></AppLayout></RequireAuth>} />
 
     {/* Admin pages */}
-    <Route
-      path="/admin/dashboard"
-      element={
-        <RequireRole roles={['ADMIN_HR']}>
-          <AdminLayout><AdminDashboard /></AdminLayout>
-        </RequireRole>
-      }
-    />
+    <Route path="/admin/dashboard" element={<RequireRole roles={['ADMIN_HR']}><AdminLayout><AdminDashboard /></AdminLayout></RequireRole>} />
+    <Route path="/admin/karyawan" element={<RequireRole roles={['ADMIN_HR']}><AdminLayout><KaryawanPage /></AdminLayout></RequireRole>} />
+    <Route path="/admin/action-center" element={<RequireRole roles={['ADMIN_HR']}><AdminLayout><ActionCenterPage /></AdminLayout></RequireRole>} />
+    <Route path="/admin/logbook" element={<RequireRole roles={['ADMIN_HR']}><AdminLayout><LogbookPage /></AdminLayout></RequireRole>} />
+    <Route path="/admin/laporan" element={<RequireRole roles={['ADMIN_HR']}><AdminLayout><LaporanPage /></AdminLayout></RequireRole>} />
+    <Route path="/admin/kontrak" element={<RequireRole roles={['ADMIN_HR']}><AdminLayout><KontrakPage /></AdminLayout></RequireRole>} />
+    <Route path="/admin/roster" element={<RequireRole roles={['ADMIN_HR']}><AdminLayout><RosterPage /></AdminLayout></RequireRole>} />
+    <Route path="/admin/lokasi" element={<RequireRole roles={['ADMIN_HR']}><AdminLayout><LokasiPage /></AdminLayout></RequireRole>} />
 
     {/* Catch-all */}
     <Route path="*" element={<Navigate to="/" replace />} />
