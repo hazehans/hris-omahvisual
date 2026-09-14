@@ -1,6 +1,6 @@
 """accounts/admin.py — Register User model di Django Admin."""
 
-from django.contrib import admin
+from django import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import User
 
