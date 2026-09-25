@@ -1,0 +1,23 @@
+.panel {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  background: var(--glass-bg);
+  box-shadow: var(--shadow-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  overflow: hidden;
+}
+
+.padded {
+  padding: var(--space-5);
+}
+
+@media (max-width: 640px) {
+  .panel {
+    border-radius: calc(var(--radius-lg) - 4px);
+  }
+
+  .padded {
+    padding: var(--space-4);
+  }
+}

@@ -1,0 +1,69 @@
+.button {
+  min-height: 2.75rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 0.55rem 1rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--color-ink);
+  touch-action: manipulation;
+  transition:
+    transform var(--motion-med) var(--ease-liquid),
+    box-shadow var(--motion-med) var(--ease-liquid),
+    border-color var(--motion-med) var(--ease-liquid),
+    background-color var(--motion-med) var(--ease-liquid),
+    filter var(--motion-med) var(--ease-liquid);
+}
+
+.button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.primary {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: linear-gradient(180deg, #2b93ff, #0a84ff);
+  color: #fff;
+  box-shadow:
+    0 10px 24px rgba(10, 132, 255, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.primary:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.secondary {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.ghost {
+  background: transparent;
+  border-color: transparent;
+}
+
+.ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.danger {
+  background: rgba(180, 45, 45, 0.12);
+  color: #ff8a80;
+  border-color: rgba(180, 45, 45, 0.28);
+}
+
+.danger:hover:not(:disabled) {
+  background: rgba(180, 45, 45, 0.18);
+}
+
+@media (max-width: 640px) {
+  .button {
+    min-height: 2.85rem;
+  }
+}

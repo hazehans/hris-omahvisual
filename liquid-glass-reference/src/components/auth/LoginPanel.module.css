@@ -1,0 +1,327 @@
+.page {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding:
+    max(1.25rem, env(safe-area-inset-top))
+    max(1rem, env(safe-area-inset-right))
+    max(1.75rem, env(safe-area-inset-bottom))
+    max(1rem, env(safe-area-inset-left));
+  overflow: hidden;
+  background: transparent;
+  color: #f5f5f7;
+}
+
+.topBar {
+  position: absolute;
+  top: max(0.75rem, env(safe-area-inset-top));
+  right: max(0.75rem, env(safe-area-inset-right));
+  z-index: 2;
+  animation: liquidRise var(--motion-slow) var(--ease-liquid) both;
+  animation-delay: 40ms;
+}
+
+.languageControl {
+  min-width: 7.5rem;
+}
+
+.stage {
+  width: min(100%, 28rem);
+  display: grid;
+  gap: 1.6rem;
+  padding: 1.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 28px;
+  background: rgba(12, 16, 24, 0.48);
+  box-shadow: var(--shadow-glass);
+  backdrop-filter: var(--glass-blur-login);
+  -webkit-backdrop-filter: var(--glass-blur-login);
+  animation: liquidRise var(--motion-slow) var(--ease-liquid) both;
+}
+
+.intro {
+  display: grid;
+  justify-items: start;
+  gap: 0.35rem;
+  animation: liquidRise var(--motion-slow) var(--ease-liquid) both;
+  animation-delay: 60ms;
+}
+
+.mark {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: grid;
+  place-items: center;
+  margin-bottom: 0.75rem;
+  border-radius: 999px;
+  background: linear-gradient(145deg, #0a84ff 0%, #5e5ce6 48%, #64d2ff 100%);
+  box-shadow:
+    0 10px 24px rgba(10, 132, 255, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.markGlyph {
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1.7rem, 6vw, 2rem);
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  color: #fff;
+}
+
+.subtitle {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.form {
+  display: grid;
+  gap: 1.2rem;
+  animation: liquidRise var(--motion-slow) var(--ease-liquid) both;
+  animation-delay: 140ms;
+}
+
+.fields {
+  display: grid;
+  gap: 1rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.fieldLabel {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.input {
+  width: 100%;
+  min-height: 3.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  padding: 0.85rem 0.95rem;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  /* Keep iOS from auto-zooming focused inputs (needs >= 16px). */
+  font-size: 16px;
+  transition:
+    border-color var(--motion-fast) var(--ease-liquid),
+    box-shadow var(--motion-fast) var(--ease-liquid),
+    background-color var(--motion-fast) var(--ease-liquid),
+    transform var(--motion-fast) var(--ease-liquid);
+}
+
+.input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.input:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.input:focus {
+  outline: none;
+  border-color: rgba(10, 132, 255, 0.7);
+  box-shadow:
+    0 0 0 4px rgba(10, 132, 255, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.error {
+  margin: 0;
+  color: #ff6b63;
+  font-size: 0.875rem;
+}
+
+.privacyNote {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.linkish {
+  color: #64d2ff;
+  font-weight: 500;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.35rem;
+}
+
+.hint {
+  margin: 0;
+  max-width: 14rem;
+  color: rgba(255, 255, 255, 0.06);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.next {
+  min-width: 5.75rem;
+  min-height: 2.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  padding: 0 1.35rem;
+  background: linear-gradient(180deg, #2b93ff, #0a84ff);
+  color: #fff;
+  font-size: 0.92rem;
+  font-weight: 600;
+  box-shadow:
+    0 10px 24px rgba(10, 132, 255, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transition:
+    transform var(--motion-med) var(--ease-liquid),
+    box-shadow var(--motion-med) var(--ease-liquid),
+    filter var(--motion-med) var(--ease-liquid);
+  touch-action: manipulation;
+}
+
+.next:hover:not(:disabled) {
+  transform: translateY(-1px) scale(1.02);
+  filter: brightness(1.05);
+  box-shadow:
+    0 14px 30px rgba(10, 132, 255, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.next:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (min-width: 900px) {
+  .stage {
+    width: min(100%, 52rem);
+    grid-template-columns: 1.05fr 1fr;
+    align-items: center;
+    gap: 2.8rem;
+    padding: 2.4rem 2.2rem;
+  }
+
+  .intro {
+    padding-right: 0.5rem;
+  }
+
+  .title {
+    font-size: 2.35rem;
+  }
+}
+
+@media (max-width: 899px) {
+  .page {
+    align-content: center;
+    place-items: stretch center;
+  }
+
+  .stage {
+    width: min(100%, 28rem);
+    max-width: 28rem;
+    gap: 1.25rem;
+    padding: 1.25rem;
+    border-radius: 24px;
+  }
+
+  .mark {
+    width: 2.25rem;
+    height: 2.25rem;
+    margin-bottom: 0.55rem;
+  }
+
+  .subtitle {
+    font-size: 0.95rem;
+  }
+
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hint {
+    max-width: none;
+    order: 2;
+  }
+
+  .next {
+    width: 100%;
+    order: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .page {
+    padding-top: max(3.5rem, calc(env(safe-area-inset-top) + 2.75rem));
+    padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+  }
+
+  .topBar {
+    top: max(0.65rem, env(safe-area-inset-top));
+    right: max(0.65rem, env(safe-area-inset-right));
+  }
+
+  .languageControl {
+    min-width: 6.75rem;
+  }
+
+  .stage {
+    gap: 1.1rem;
+    padding: 1.1rem;
+    border-radius: 22px;
+  }
+
+  .form {
+    gap: 1rem;
+  }
+
+  .privacyNote {
+    font-size: 0.82rem;
+  }
+}
+
+@media (max-height: 720px) and (max-width: 899px) {
+  .page {
+    align-content: start;
+    padding-top: max(3.25rem, calc(env(safe-area-inset-top) + 2.5rem));
+  }
+
+  .stage {
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .mark {
+    margin-bottom: 0.35rem;
+  }
+}

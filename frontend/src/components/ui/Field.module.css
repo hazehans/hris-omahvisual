@@ -1,0 +1,53 @@
+.field {
+  display: grid;
+  gap: 0.4rem;
+  color: var(--color-ink-muted);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.label {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.control {
+  width: 100%;
+  min-height: 2.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  padding: 0.7rem 0.9rem;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-ink);
+  /* Keep iOS from auto-zooming focused inputs (needs >= 16px). */
+  font-size: 16px;
+  transition:
+    border-color var(--motion-fast) var(--ease-liquid),
+    box-shadow var(--motion-fast) var(--ease-liquid),
+    background-color var(--motion-fast) var(--ease-liquid);
+}
+
+.control::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.control:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.control:focus {
+  outline: none;
+  border-color: rgba(10, 132, 255, 0.7);
+  box-shadow:
+    0 0 0 4px rgba(10, 132, 255, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 640px) {
+  .control {
+    min-height: 3rem;
+  }
+}

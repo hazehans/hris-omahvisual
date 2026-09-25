@@ -1,0 +1,95 @@
+.stack {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.heroCard {
+  display: grid;
+}
+
+.heroCopy {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 48rem;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 2.4vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #fff;
+}
+
+.body {
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: var(--space-3);
+}
+
+.card {
+  display: grid;
+  gap: var(--space-2);
+  min-height: 10rem;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+
+.cardBody {
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  .stack {
+    gap: var(--space-3);
+  }
+
+  .title {
+    font-size: clamp(1.35rem, 6vw, 1.7rem);
+  }
+
+  .body {
+    font-size: 0.95rem;
+  }
+
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .actions > * {
+    width: 100%;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .card {
+    min-height: 0;
+  }
+}
