@@ -1,10 +1,11 @@
 import TablePagination from '../components/TablePagination';
 import React, { useEffect, useState } from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
 import { 
   LogOut, Users, Clock, AlertTriangle, CheckCircle, Check, X, 
   Paperclip, FileCheck, History, LayoutDashboard, CalendarCheck, 
   ClipboardEdit, FileSpreadsheet, FileSignature, RefreshCw, Edit, Trash2, ArrowUpDown, Loader, Download
-} from 'lucide-react';
+, RefreshCw, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
@@ -16,6 +17,7 @@ const Dashboard = () => {
   const [pageState, setPageState] = useState({
     KARYAWAN: { p: 1, l: 10 },
     ABSENSI: { p: 1, l: 10 },
+      RAW_LOGS: { p: 1, l: 10 },
     DAILY_LOG: { p: 1, l: 10 },
     CUTI_PENDING: { p: 1, l: 10 },
     CUTI_HISTORY: { p: 1, l: 10 },
@@ -28,11 +30,13 @@ const Dashboard = () => {
 
   // States
   const [logs, setLogs] = useState([]);
+    const [rawLogs, setRawLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pendingLeaves, setPendingLeaves] = useState([]);
   const [historyLeaves, setHistoryLeaves] = useState([]);
   const [employeesList, setEmployeesList] = useState([]);
   const [dailyLogs, setDailyLogs] = useState([]);
+  const [analytics, setAnalytics] = useState({ chart_data: [], top_lates: [] });
   
   // Fitur Filter & Loading
   const [isRefreshingEmp, setIsRefreshingEmp] = useState(false);
@@ -73,7 +77,26 @@ const Dashboard = () => {
   });
 
   // --- API FETCHERS ---
-  const fetchAttendance = async () => {
+  
+  const fetchAnalytics = async () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const res = await axios.get('http://127.0.0.1:8000/api/v1/attendance/analytics/', { headers: { Authorization: `Bearer ${token}` }});
+      setAnalytics(res.data);
+    } catch (e) {
+      console.error('Failed to fetch analytics', e);
+    }
+  };
+
+  const fetchRawLogs = async () => {
+      try {
+        const token = localStorage.getItem('access_token');
+        const res = await axios.get('http://127.0.0.1:8000/api/v1/attendance/raw-events/', { headers: { Authorization: `Bearer ${token}` } });
+        setRawLogs(res.data);
+      } catch (e) {}
+    };
+
+    const fetchAttendance = async () => {
     try {
       const res = await axios.get('http://127.0.0.1:8000/api/v1/attendance/today/');
       setLogs(res.data);
@@ -107,7 +130,7 @@ const Dashboard = () => {
     if (showLoading) setIsRefreshingLog(true);
     try {
       const token = localStorage.getItem('access_token');
-      const res = await axios.get(`http://127.0.0.1:8000/api/v1/daily-logs/?date=${logDateFilter}`, { headers: { Authorization: `Bearer ${token}` }});
+      const res = await axios.get(`http://127.0.0.1:8000/api/v1/daily-report/?date=${logDateFilter}`, { headers: { Authorization: `Bearer ${token}` }});
       setDailyLogs(res.data);
     } catch (e) {}
     if (showLoading) setTimeout(() => setIsRefreshingLog(false), 600);
@@ -207,7 +230,7 @@ const Dashboard = () => {
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (!token) { navigate('/login'); return; }
-    fetchAttendance(); fetchLeaves(); fetchEmployees(); fetchDailyLogs();
+    fetchAttendance(); fetchLeaves(); fetchEmployees(); fetchDailyLogs(); fetchAnalytics(); fetchRawLogs();
     const interval = setInterval(() => { fetchAttendance(); fetchLeaves(); fetchDailyLogs(); }, 5000); 
     return () => clearInterval(interval);
   }, [navigate]);
@@ -224,11 +247,12 @@ const Dashboard = () => {
 
   const navItems = [
     { id: 'OVERVIEW', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'KARYAWAN', label: 'Data Karyawan', icon: Users },
+    { id: 'KARYAWAN', label: 'Karyawan & Kontrak', icon: Users },
     { id: 'ABSENSI', label: 'Live Absensi', icon: CalendarCheck },
+      { id: 'RAW_LOGS', label: 'Raw Event Log', icon: FileText },
     { id: 'DAILY_LOG', label: 'Daily Log', icon: ClipboardEdit },
     { id: 'CUTI', label: 'Izin & Cuti', icon: FileSpreadsheet },
-    { id: 'KONTRAK', label: 'Kontrak & PKWT', icon: FileSignature },
+    
   ];
 
   return (
@@ -272,40 +296,50 @@ const Dashboard = () => {
             
             return (
             <div className="space-y-6 animate-in fade-in">
-              {birthdayEmployees.length > 0 && (
-                <div className="bg-gradient-to-r from-pink-500/20 to-purple-500/20 border border-pink-500/30 rounded-3xl p-5 mb-2 flex items-center shadow-lg">
-                  <div className="text-4xl mr-4 animate-bounce">🎉</div>
-                  <div>
-                    <h3 className="text-pink-300 font-bold text-lg">Ulang Tahun Bulan Ini!</h3>
-                    <div className="text-sm text-pink-200/80 mt-2">
-                      Jangan lupa beri ucapan selamat kepada:
-                      <ul className="mt-1.5 space-y-1">
-                        {birthdayEmployees.map(e => (
-                          <li key={e.id} className="text-white flex items-center">
-                            <span className="w-1.5 h-1.5 rounded-full bg-pink-400 mr-2"></span>
-                            <span className="font-bold">{e.full_name}</span> 
-                            <span className="text-pink-300 ml-1.5">({new Date(e.birth_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long' })})</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-6 h-fit">
+                  <div className="bg-indigo-500/10 border border-indigo-500/20 backdrop-blur-xl rounded-3xl p-6 shadow-xl">
+                    <h3 className="text-slate-400 text-sm font-medium mb-2">Total Karyawan Aktif</h3>
+                    <div className="text-4xl font-bold text-indigo-300">{employeesList.filter(e=>e.is_active).length}</div>
+                  </div>
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 backdrop-blur-xl rounded-3xl p-6 shadow-xl">
+                    <h3 className="text-slate-400 text-sm font-medium mb-2">Kehadiran Hari Ini</h3>
+                    <div className="text-4xl font-bold text-emerald-300">{logs.filter(l => l.clock_in !== '-').length} <span className="text-lg text-emerald-500/50">/ {employeesList.filter(e=>e.is_active).length}</span></div>
+                  </div>
+                  <div className="bg-amber-500/10 border border-amber-500/20 backdrop-blur-xl rounded-3xl p-6 shadow-xl">
+                    <h3 className="text-slate-400 text-sm font-medium mb-2">Izin Pending</h3>
+                    <div className="text-4xl font-bold text-amber-300">{pendingLeaves.length}</div>
                   </div>
                 </div>
-              )}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-indigo-500/10 border border-indigo-500/20 backdrop-blur-xl rounded-3xl p-6 shadow-xl">
-                  <h3 className="text-slate-400 text-sm font-medium mb-2">Total Karyawan Aktif</h3>
-                  <div className="text-4xl font-bold text-indigo-300">{employeesList.filter(e=>e.is_active).length}</div>
-                </div>
-                <div className="bg-emerald-500/10 border border-emerald-500/20 backdrop-blur-xl rounded-3xl p-6 shadow-xl">
-                  <h3 className="text-slate-400 text-sm font-medium mb-2">Kehadiran Hari Ini</h3>
-                  <div className="text-4xl font-bold text-emerald-300">{logs.filter(l => l.clock_in !== '-').length} <span className="text-lg text-emerald-500/50">/ {employeesList.filter(e=>e.is_active).length}</span></div>
-                </div>
-                <div className="bg-amber-500/10 border border-amber-500/20 backdrop-blur-xl rounded-3xl p-6 shadow-xl">
-                  <h3 className="text-slate-400 text-sm font-medium mb-2">Izin Pending</h3>
-                  <div className="text-4xl font-bold text-amber-300">{pendingLeaves.length}</div>
+
+                {/* Widget Ulang Tahun */}
+                <div className="md:col-span-1 bg-gradient-to-b from-pink-500/10 to-purple-500/10 border border-pink-500/20 backdrop-blur-xl rounded-3xl p-5 shadow-xl h-fit">
+                  <div className="flex items-center mb-4">
+                    <div className="text-2xl mr-3 animate-bounce">🎉</div>
+                    <h3 className="text-pink-300 font-bold">Ulang Tahun Bulan Ini</h3>
+                  </div>
+                  {birthdayEmployees.length > 0 ? (
+                    <div className="space-y-3">
+                      {birthdayEmployees.map(e => (
+                        <div key={e.id} className="bg-white/5 border border-white/10 rounded-xl p-3 flex justify-between items-center hover:bg-white/10 transition">
+                          <div>
+                            <p className="text-white font-medium text-sm">{e.full_name}</p>
+                            <p className="text-slate-400 text-xs">{e.role}</p>
+                          </div>
+                          <div className="text-pink-400 font-bold text-sm bg-pink-500/10 px-2 py-1 rounded-lg">
+                            {new Date(e.birth_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 text-slate-500 text-sm border border-dashed border-white/10 rounded-xl">
+                      Tidak ada yang berulang tahun bulan ini
+                    </div>
+                  )}
                 </div>
               </div>
+
               </div>
             );
           })()}
@@ -382,6 +416,9 @@ const Dashboard = () => {
                   </tbody>
                 </table>
               </div>
+              <div className="mt-4">
+                <TablePagination currentPage={getPage('KARYAWAN')} totalPages={Math.ceil(sortedEmployees.length / getLimit('KARYAWAN'))} rowsPerPage={getLimit('KARYAWAN')} setPage={(p) => setPage('KARYAWAN', p)} setRowsPerPage={(l) => setLimit('KARYAWAN', l)} totalItems={sortedEmployees.length} />
+              </div>
             </div>
             );
           })()}
@@ -391,9 +428,31 @@ const Dashboard = () => {
             const paginatedLogs = logs.slice((getPage('ABSENSI') - 1) * getLimit('ABSENSI'), getPage('ABSENSI') * getLimit('ABSENSI'));
             return (
             <div className="animate-in fade-in">
+              <div className="flex justify-between items-end mb-6">
+                <div>
+                  <h2 className="text-xl font-bold text-white drop-shadow-md">Live Absensi Harian</h2>
+                  <p className="text-slate-400 mt-1 text-sm">Pemantauan kehadiran real-time dari mesin Hikvision.</p>
+                </div>
+                <button 
+                  onClick={async () => {
+                    if(!confirm('Tarik data terbaru dari mesin sekarang?')) return;
+                    try {
+                      const token = localStorage.getItem('access_token');
+                      await axios.post('http://127.0.0.1:8000/api/v1/attendance/fetch/', {}, { headers: { Authorization: `Bearer ${token}` } });
+                      alert('Data berhasil ditarik dari mesin!');
+                      fetchAttendance(); fetchRawLogs();
+                    } catch (e) {
+                      alert('Gagal menarik data dari mesin.');
+                    }
+                  }}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2 px-4 rounded-xl shadow-lg transition"
+                >
+                  <RefreshCw className="w-4 h-4 inline-block mr-2" />
+                  Tarik Data dari Mesin
+                </button>
+              </div>
               <div className="bg-white/5 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/10 overflow-hidden">
                   <table className="min-w-full divide-y divide-white/5">
-                    {/* Simplified for brevity (Same as before) */}
                     <thead className="bg-black/20">
                       <tr>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-slate-400 uppercase">Nama Karyawan</th>
@@ -404,7 +463,7 @@ const Dashboard = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
-                      {logs.map((log, idx) => (
+                      {paginatedLogs.map((log, idx) => (
                         <tr key={idx} className="hover:bg-white/5">
                           <td className="px-6 py-4 text-sm text-slate-200 font-medium">{log.name}</td>
                           <td className="px-6 py-4 text-sm text-emerald-400">{log.clock_in}</td>
@@ -415,6 +474,70 @@ const Dashboard = () => {
                       ))}
                     </tbody>
                   </table>
+              </div>
+              <div className="mt-4">
+                <TablePagination currentPage={getPage('ABSENSI')} totalPages={Math.ceil(logs.length / getLimit('ABSENSI'))} rowsPerPage={getLimit('ABSENSI')} setPage={(p) => setPage('ABSENSI', p)} setRowsPerPage={(l) => setLimit('ABSENSI', l)} totalItems={logs.length} />
+              </div>
+            </div>
+            );
+          })()}
+
+          
+          {/* TAB: RAW LOGS */}
+          {activeTab === 'RAW_LOGS' && (() => {
+            const paginatedRaw = rawLogs.slice((getPage('RAW_LOGS') - 1) * getLimit('RAW_LOGS'), getPage('RAW_LOGS') * getLimit('RAW_LOGS'));
+            return (
+            <div className="animate-in fade-in">
+              <div className="flex justify-between items-end mb-6">
+                <div>
+                  <h2 className="text-xl font-bold text-white drop-shadow-md">Raw Event Log (Mesin Hikvision)</h2>
+                  <p className="text-slate-400 mt-1 text-sm">Arsip mentah semua log dari mesin (termasuk yang tidak valid/ditolak).</p>
+                </div>
+                <button 
+                  onClick={async () => {
+                    fetchRawLogs();
+                  }}
+                  className="bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-xl shadow-lg transition"
+                >
+                  <RefreshCw className="w-4 h-4 inline-block mr-2" />
+                  Refresh Tabel
+                </button>
+              </div>
+              
+              <div className="bg-white/5 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/10 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-white/5">
+                    <thead className="bg-black/20">
+                      <tr>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-400 uppercase">Waktu Mesin</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-400 uppercase">Serial No</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-400 uppercase">Major/Minor</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-400 uppercase">Employee No</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-400 uppercase">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {paginatedRaw.map((log, idx) => {
+                        const isSuccess = log.major === 5 && log.minor === 1;
+                        return (
+                        <tr key={idx} className="hover:bg-white/5 transition duration-200">
+                          <td className="px-6 py-4 text-sm text-slate-200">{log.event_time_raw}</td>
+                          <td className="px-6 py-4 text-sm text-slate-400">#{log.serial_no}</td>
+                          <td className="px-6 py-4 text-sm font-mono text-slate-300">M:{log.major} / m:{log.minor}</td>
+                          <td className="px-6 py-4 text-sm">
+                            {log.employee_no ? <span className="font-bold text-indigo-400">{log.employee_no} ({log.name_on_device})</span> : <span className="text-slate-600 italic">Unknown</span>}
+                          </td>
+                          <td className="px-6 py-4 text-sm">
+                            {isSuccess ? <span className="px-2 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded text-xs font-bold">SUCCESS</span> : <span className="px-2 py-1 bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded text-xs">INVALID</span>}
+                          </td>
+                        </tr>
+                      )})}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div className="mt-4">
+                <TablePagination currentPage={getPage('RAW_LOGS')} totalPages={Math.ceil(rawLogs.length / getLimit('RAW_LOGS'))} rowsPerPage={getLimit('RAW_LOGS')} setPage={(p) => setPage('RAW_LOGS', p)} setRowsPerPage={(l) => setLimit('RAW_LOGS', l)} totalItems={rawLogs.length} />
               </div>
             </div>
             );
@@ -435,23 +558,18 @@ const Dashboard = () => {
                     <span className="text-xs text-slate-400">Filter:</span>
                     <select 
                       className="bg-transparent text-sm text-slate-200 outline-none cursor-pointer"
-                      value={logDateFilter === 'ALL' ? 'ALL' : (logDateFilter === new Date().toISOString().split('T')[0] ? 'TODAY' : 'CUSTOM')}
+                      value={logDateFilter === 'ALL' ? 'ALL' : 'DATE'}
                       onChange={(e) => {
                         const val = e.target.value;
                         if (val === 'ALL') setLogDateFilter('ALL');
-                        else if (val === 'TODAY') setLogDateFilter(new Date().toISOString().split('T')[0]);
+                        else setLogDateFilter(new Date().toISOString().split('T')[0]);
                       }}
                     >
-                      <option className="bg-slate-800" value="TODAY">Hari ini/Pilih Tanggal</option>
+                      <option className="bg-slate-800" value="DATE">Pilih Tanggal</option>
                       <option className="bg-slate-800" value="ALL">Semua Waktu</option>
                     </select>
-                    {logDateFilter !== 'ALL' && logDateFilter !== new Date().toISOString().split('T')[0] && (
+                    {logDateFilter !== 'ALL' && (
                       <input type="date" style={{ colorScheme: 'dark' }} className="bg-transparent text-sm text-slate-200 outline-none ml-2 border-l border-white/10 pl-2" value={logDateFilter} onChange={(e) => setLogDateFilter(e.target.value)} />
-                    )}
-                    {logDateFilter === new Date().toISOString().split('T')[0] && ( // hidden input just to let them trigger custom when they want to click date picker directly if we want, but logic above is cleaner
-                      <input type="date" style={{ colorScheme: 'dark' }} className="bg-transparent text-sm text-slate-200 outline-none ml-2 border-l border-white/10 pl-2" value={logDateFilter} onChange={(e) => {
-                         setLogDateFilter(e.target.value);
-                      }} />
                     )}
                   </div>
                   <button onClick={() => exportToCSV(dailyLogs, `Daily_Log_${logDateFilter}.csv`, ['created_at', 'employee_name', 'employee_role', 'activity', 'work_link', 'issue'], ['Waktu Kirim', 'Karyawan', 'Jabatan', 'Aktivitas', 'Link Kerja', 'Kendala'])} className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-4 py-2 rounded-xl flex items-center transition text-sm">
@@ -488,7 +606,7 @@ const Dashboard = () => {
                         </td>
                       </tr>
                     ) : (
-                      dailyLogs.map((log) => {
+                      paginatedDailyLogs.map((log) => {
                         const time = new Date(log.created_at).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
                         return (
                         <tr key={log.id} className="hover:bg-white/5 transition duration-200">
@@ -522,6 +640,9 @@ const Dashboard = () => {
                   </tbody>
                 </table>
               </div>
+              <div className="mt-4">
+                <TablePagination currentPage={getPage('DAILY_LOG')} totalPages={Math.ceil(dailyLogs.length / getLimit('DAILY_LOG'))} rowsPerPage={getLimit('DAILY_LOG')} setPage={(p) => setPage('DAILY_LOG', p)} setRowsPerPage={(l) => setLimit('DAILY_LOG', l)} totalItems={dailyLogs.length} />
+              </div>
             </div>
             );
           })()}
@@ -545,20 +666,17 @@ const Dashboard = () => {
                     <span className="text-xs text-slate-400">Filter (Tgl Dibuat):</span>
                     <select 
                       className="bg-transparent text-sm text-slate-200 outline-none cursor-pointer"
-                      value={leaveDateFilter === 'ALL' ? 'ALL' : (leaveDateFilter === new Date().toISOString().split('T')[0] ? 'TODAY' : 'CUSTOM')}
+                      value={leaveDateFilter === 'ALL' ? 'ALL' : 'DATE'}
                       onChange={(e) => {
                         const val = e.target.value;
                         if (val === 'ALL') setLeaveDateFilter('ALL');
-                        else if (val === 'TODAY') setLeaveDateFilter(new Date().toISOString().split('T')[0]);
+                        else setLeaveDateFilter(new Date().toISOString().split('T')[0]);
                       }}
                     >
                       <option className="bg-slate-800" value="ALL">Semua Waktu</option>
-                      <option className="bg-slate-800" value="TODAY">Hari ini/Pilih Tanggal</option>
+                      <option className="bg-slate-800" value="DATE">Pilih Tanggal</option>
                     </select>
-                    {leaveDateFilter !== 'ALL' && leaveDateFilter !== new Date().toISOString().split('T')[0] && (
-                      <input type="date" style={{ colorScheme: 'dark' }} className="bg-transparent text-sm text-slate-200 outline-none ml-2 border-l border-white/10 pl-2" value={leaveDateFilter} onChange={(e) => setLeaveDateFilter(e.target.value)} />
-                    )}
-                    {leaveDateFilter === new Date().toISOString().split('T')[0] && (
+                    {leaveDateFilter !== 'ALL' && (
                       <input type="date" style={{ colorScheme: 'dark' }} className="bg-transparent text-sm text-slate-200 outline-none ml-2 border-l border-white/10 pl-2" value={leaveDateFilter} onChange={(e) => setLeaveDateFilter(e.target.value)} />
                     )}
                   </div>
@@ -628,6 +746,9 @@ const Dashboard = () => {
                   </tbody>
                 </table>
               </div>
+              <div className="mt-4">
+                <TablePagination currentPage={getPage('CUTI_PENDING')} totalPages={Math.ceil(filteredPending.length / getLimit('CUTI_PENDING'))} rowsPerPage={getLimit('CUTI_PENDING')} setPage={(p) => setPage('CUTI_PENDING', p)} setRowsPerPage={(l) => setLimit('CUTI_PENDING', l)} totalItems={filteredPending.length} />
+              </div>
 
               {/* History Table */}
               <div className="bg-white/5 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/10 overflow-hidden">
@@ -686,122 +807,15 @@ const Dashboard = () => {
                   </tbody>
                 </table>
               </div>
+              <div className="mt-4">
+                <TablePagination currentPage={getPage('CUTI_HISTORY')} totalPages={Math.ceil(filteredHistory.length / getLimit('CUTI_HISTORY'))} rowsPerPage={getLimit('CUTI_HISTORY')} setPage={(p) => setPage('CUTI_HISTORY', p)} setRowsPerPage={(l) => setLimit('CUTI_HISTORY', l)} totalItems={filteredHistory.length} />
+              </div>
             </div>
             );
           })()}
 
           {/* TAB 6: KONTRAK & PKWT */}
-          {activeTab === 'KONTRAK' && (() => {
-            const pkwtEmployees = employeesList.filter(e => e.is_active && (e.contract_type === 'PKWT' || e.contract_type === 'INTERN'));
-            const pkwttEmployees = employeesList.filter(e => e.is_active && (e.contract_type === 'PKWTT' || e.contract_type === 'FREELANCE'));
-            
-            const today = new Date();
-            today.setHours(0,0,0,0);
-            
-            const getStatus = (endDateStr) => {
-              if (!endDateStr) return { label: 'Tidak Ada', color: 'text-slate-500 bg-slate-500/10 border-slate-500/20' };
-              const endDate = new Date(endDateStr);
-              const diffTime = endDate - today;
-              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-              
-              if (diffDays < 0) return { label: 'Habis', color: 'text-rose-400 bg-rose-500/10 border-rose-500/20', textDays: `Lewat ${Math.abs(diffDays)} hari` };
-              if (diffDays === 0) return { label: 'Segera Habis', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20', textDays: `Hari ini terakhir` };
-              if (diffDays <= 30) return { label: 'Segera Habis', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20', textDays: `Sisa ${diffDays} hari` };
-              return { label: 'Aman', color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20', textDays: `Sisa ${diffDays} hari` };
-            };
-            
-            return (
-              <div className="space-y-6 animate-in fade-in">
-                <div className="flex justify-between items-end mb-4">
-                  <div>
-                    <h2 className="text-xl font-bold text-white drop-shadow-md">Manajemen Kontrak & PKWT</h2>
-                    <p className="text-slate-400 mt-1 text-sm">Monitor masa berlaku kontrak karyawan dan peringatan dini.</p>
-                  </div>
-                  <button onClick={() => fetchEmployees(true)} className="bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 px-4 py-2 rounded-xl flex items-center transition text-sm">
-                    <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshingEmp ? 'animate-spin text-indigo-400' : ''}`} /> 
-                    {isRefreshingEmp ? 'Memuat...' : 'Refresh'}
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                  <div className="bg-white/5 border border-white/10 backdrop-blur-xl rounded-3xl p-6 shadow-xl">
-                    <h3 className="text-slate-400 text-sm font-medium mb-2">Total PKWT / Magang</h3>
-                    <div className="text-4xl font-bold text-white">{pkwtEmployees.length}</div>
-                  </div>
-                  <div className="bg-white/5 border border-white/10 backdrop-blur-xl rounded-3xl p-6 shadow-xl">
-                    <h3 className="text-slate-400 text-sm font-medium mb-2">Total Karyawan Tetap</h3>
-                    <div className="text-4xl font-bold text-blue-300">{pkwttEmployees.length}</div>
-                  </div>
-                  <div className="bg-amber-500/10 border border-amber-500/20 backdrop-blur-xl rounded-3xl p-6 shadow-xl">
-                    <h3 className="text-amber-400/80 text-sm font-medium mb-2 flex items-center"><AlertTriangle className="w-4 h-4 mr-1"/> Perlu Perhatian</h3>
-                    <div className="text-4xl font-bold text-amber-400">
-                      {pkwtEmployees.filter(e => getStatus(e.contract_end_date).label !== 'Aman' && getStatus(e.contract_end_date).label !== 'Tidak Ada').length}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white/5 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/10 overflow-hidden">
-                  <div className="p-6 border-b border-white/5">
-                    <h3 className="font-bold text-white">Daftar Kontrak Karyawan</h3>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-white/5">
-                      <thead className="bg-black/20">
-                        <tr>
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-slate-400 uppercase">Karyawan</th>
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-slate-400 uppercase">Status Kontrak</th>
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-slate-400 uppercase">Periode</th>
-                          <th className="px-6 py-4 text-center text-xs font-semibold text-slate-400 uppercase">Peringatan</th>
-                          <th className="px-6 py-4 text-center text-xs font-semibold text-slate-400 uppercase">Aksi</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/5">
-                        {paginatedContracts.map(emp => {
-                          const status = getStatus(emp.contract_end_date);
-                          return (
-                            <tr key={emp.id} className="hover:bg-white/5 transition">
-                              <td className="px-6 py-4">
-                                <div className="text-sm font-bold text-slate-200">{emp.full_name}</div>
-                                <div className="text-xs text-slate-500">{emp.nik}</div>
-                              </td>
-                              <td className="px-6 py-4">
-                                <span className={`px-3 py-1 rounded-full text-xs font-bold border ${emp.contract_type === 'PKWT' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' : emp.contract_type === 'INTERN' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}`}>
-                                  {emp.contract_type}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 text-sm text-slate-300">
-                                <div>Mulai: <span className="font-medium text-slate-200">{emp.join_date}</span></div>
-                                {(emp.contract_type === 'PKWT' || emp.contract_type === 'INTERN') && (
-                                  <div>Berakhir: <span className="font-medium text-slate-200">{emp.contract_end_date || '-'}</span></div>
-                                )}
-                              </td>
-                              <td className="px-6 py-4 text-center">
-                                {(emp.contract_type === 'PKWT' || emp.contract_type === 'INTERN') ? (
-                                  <span className={`px-3 py-1 rounded-full text-xs font-bold border ${status.color}`}>
-                                    {status.label} {status.textDays && `(${status.textDays})`}
-                                  </span>
-                                ) : (
-                                  <span className="text-slate-500 text-xs">-</span>
-                                )}
-                              </td>
-                              <td className="px-6 py-4 text-center">
-                                <button onClick={() => openEditEmployee(emp)} className="text-blue-400 hover:text-blue-300 text-xs bg-blue-500/10 hover:bg-blue-500/20 px-3 py-2 rounded-lg transition border border-blue-500/20">
-                                  Perbarui
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                  <TablePagination currentPage={getPage('KONTRAK')} totalPages={Math.ceil(activeContracts.length / getLimit('KONTRAK'))} rowsPerPage={getLimit('KONTRAK')} setPage={(p) => setPage('KONTRAK', p)} setRowsPerPage={(l) => setLimit('KONTRAK', l)} totalItems={activeContracts.length} />
-                </div>
-              </div>
-            );
-          })()}
-
-        </main>
+          </main>
       </div>
 
       {/* MODAL APPROVE CUTI */}

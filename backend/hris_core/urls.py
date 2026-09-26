@@ -16,10 +16,11 @@ urlpatterns = [
     path('api/v1/employees/', include('employees.urls')),
     path('api/v1/attendance/', include('attendance.urls')),
     path('api/v1/daily-report/', include('daily_report.urls')),
+    path('api/v1/daily-logs/', include('daily_report.urls')), # Alias to prevent caching errors
     path('api/v1/leave/', include('leave.urls')),
-    path('api/v1/contracts/', include('contracts.urls')),
-    path('api/v1/roster/', include('roster.urls')),
-    path('api/v1/dashboard/', include('dashboard.urls')),
+    # path('api/v1/contracts/', include('contracts.urls')),
+    # path('api/v1/roster/', include('roster.urls')),
+    # path('api/v1/dashboard/', include('dashboard.urls')),
 ]
 
 # Serve media files di development

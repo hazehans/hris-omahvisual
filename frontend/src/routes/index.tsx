@@ -7,6 +7,7 @@ import { LoginPage } from '@/pages/auth/LoginPage'
 import { HRLayout } from '@/pages/hr/HRLayout'
 import { HRDashboardPage } from '@/pages/hr/HRDashboardPage'
 import { HRAttendancePage } from '@/pages/hr/HRAttendancePage'
+import { HRRawLogsPage } from '@/pages/hr/HRRawLogsPage'
 import { HREmployeesPage } from '@/pages/hr/HREmployeesPage'
 import { HRDailyLogPage } from '@/pages/hr/HRDailyLogPage'
 import { HRLeavePage } from '@/pages/hr/HRLeavePage'
@@ -59,6 +60,7 @@ export function AppRouter() {
           <Route index element={<Navigate to="/hr/dashboard" replace />} />
           <Route path="dashboard" element={<HRDashboardPage />} />
           <Route path="attendance" element={<HRAttendancePage />} />
+          <Route path="raw-logs" element={<HRRawLogsPage />} />
           <Route path="employees" element={<HREmployeesPage />} />
           <Route path="daily-log" element={<HRDailyLogPage />} />
           <Route path="leave" element={<HRLeavePage />} />

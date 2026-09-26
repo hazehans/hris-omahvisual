@@ -8,7 +8,7 @@ import { AppShell, type AppPage } from '@/components/layout/AppShell'
 import { useAuth } from '@/context/AuthContext'
 import { isLanguage, UI_TEXT, type Language } from '@/lib/i18n'
 
-type HRPageId = 'dashboard' | 'attendance' | 'employees' | 'daily-log' | 'leave'
+type HRPageId = 'dashboard' | 'attendance' | 'raw-logs' | 'employees' | 'daily-log' | 'leave'
 
 const HR_PAGES: AppPage<HRPageId>[] = [
   { id: 'dashboard',  label: 'Dashboard',    description: 'Overview & Statistik HRIS',      icon: '◎' },
@@ -22,6 +22,7 @@ const HR_PAGES: AppPage<HRPageId>[] = [
 const PATH_TO_PAGE: Record<string, HRPageId> = {
   dashboard:  'dashboard',
   attendance: 'attendance',
+  'raw-logs': 'raw-logs',
   employees:  'employees',
   'daily-log': 'daily-log',
   leave:      'leave',

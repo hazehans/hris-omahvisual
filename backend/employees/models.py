@@ -8,7 +8,7 @@ class Employee(models.Model):
         ('PEREMPUAN', 'Perempuan'),
     ]
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='employee_profile')
     
     nik = models.CharField(max_length=50, unique=True, verbose_name="Nomor Karyawan (ID)")

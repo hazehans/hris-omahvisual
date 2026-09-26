@@ -43,7 +43,7 @@ const EmployeeDashboard = () => {
   const fetchDailyLogs = async () => {
     try {
       const token = localStorage.getItem('access_token');
-      const res = await axios.get(`http://127.0.0.1:8000/api/v1/daily-logs/?date=${logDateFilter}`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await axios.get(`http://127.0.0.1:8000/api/v1/daily-report/?date=${logDateFilter}`, { headers: { Authorization: `Bearer ${token}` } });
       setDailyLogs(res.data);
     } catch (err) {}
   };
@@ -52,7 +52,7 @@ const EmployeeDashboard = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('access_token');
-      await axios.post('http://127.0.0.1:8000/api/v1/daily-logs/', logForm, { headers: { Authorization: `Bearer ${token}` } });
+      await axios.post('http://127.0.0.1:8000/api/v1/daily-report/', logForm, { headers: { Authorization: `Bearer ${token}` } });
       setLogForm({ date: new Date().toISOString().split('T')[0], activity: '', work_link: '', issue: '' });
       fetchDailyLogs();
       alert('Laporan berhasil ditambahkan!');

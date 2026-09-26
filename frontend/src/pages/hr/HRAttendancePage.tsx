@@ -6,6 +6,7 @@ import { GlassPanel } from '@/components/ui/GlassPanel'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { attendanceService } from '@/services/attendanceService'
+import { apiRequest } from '@/services/api'
 import type { AttendanceTodayItem } from '@/types'
 import styles from './HRDashboardPage.module.css'
 
@@ -15,6 +16,24 @@ export function HRAttendancePage() {
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+
+  const [fetchingDevice, setFetchingDevice] = useState(false)
+  const [fetchMessage, setFetchMessage] = useState('')
+
+  const handleFetchDevice = async () => {
+    setFetchingDevice(true)
+    setFetchMessage('')
+    try {
+      const res = await apiRequest<any>('/attendance/fetch/', { method: 'POST' })
+      setFetchMessage(`Berhasil menarik ${res.total_fetched} log mesin.`)
+      void fetchData(true)
+    } catch (err: any) {
+      setFetchMessage(err.message || 'Gagal menarik data dari mesin.')
+    } finally {
+      setFetchingDevice(false)
+    }
+  }
+
 
   const fetchData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true)
@@ -83,6 +102,16 @@ export function HRAttendancePage() {
                 Update: {lastUpdated.toLocaleTimeString('id-ID')}
               </span>
             )}
+            
+            {fetchMessage && <span style={{ fontSize: '0.75rem', color: '#10b981' }}>{fetchMessage}</span>}
+            <Button
+              variant="primary"
+              onClick={handleFetchDevice}
+              disabled={fetchingDevice}
+            >
+              {fetchingDevice ? 'Sedang Menarik...' : '🔄 Tarik Data Mesin'}
+            </Button>
+
             <Button
               variant="ghost"
               onClick={() => void fetchData(true)}
