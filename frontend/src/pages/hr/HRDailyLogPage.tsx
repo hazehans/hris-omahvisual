@@ -16,6 +16,9 @@ export function HRDailyLogPage() {
   const [dateFilter, setDateFilter] = useState<string>('ALL')
   const [customDate, setCustomDate] = useState<string>(new Date().toISOString().split('T')[0])
   const [roleFilter, setRoleFilter] = useState<string>('ALL')
+  const [search, setSearch] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
 
   const fetchLogs = useCallback(async () => {
     setLoading(true)
@@ -34,6 +37,8 @@ export function HRDailyLogPage() {
   useEffect(() => { void fetchLogs() }, [fetchLogs])
 
   const todayStr = new Date().toISOString().split('T')[0]
+
+
 
   if (loading) {
     return (
@@ -72,10 +77,19 @@ export function HRDailyLogPage() {
               />
             )}
             
+            <div className={styles.searchWrap} style={{ marginLeft: 'auto' }}>
+              <input
+                className={styles.searchInput}
+                type="search"
+                placeholder="Cari nama, aktivitas..."
+                value={search}
+                onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+              />
+            </div>
             {/* Filter Departemen/Jabatan */}
             <select
               className={styles.input}
-              style={{ width: 'auto', padding: '0.375rem 0.75rem', marginLeft: 'auto' }}
+              style={{ width: 'auto', padding: '0.375rem 0.75rem' }}
               value={roleFilter}
               onChange={e => setRoleFilter(e.target.value)}
             >
@@ -103,14 +117,27 @@ export function HRDailyLogPage() {
           <div className={styles.tableWrap} style={{ display: 'flex', flexDirection: 'column', gap: '2rem', padding: '1rem 0' }}>
             {(() => {
               // 1. Filter by Role
-              const filteredLogs = logs.filter(log => roleFilter === 'ALL' || log.employee_role === roleFilter)
+              const filteredLogs = logs.filter(log => {
+                if (roleFilter !== 'ALL' && log.employee_role !== roleFilter) return false;
+                if (search && !(
+                  log.employee_name.toLowerCase().includes(search.toLowerCase()) || 
+                  log.activity.toLowerCase().includes(search.toLowerCase()) || 
+                  (log.issue && log.issue.toLowerCase().includes(search.toLowerCase()))
+                )) return false;
+                return true;
+              })
 
               if (filteredLogs.length === 0) {
                 return <p className={styles.empty}>Tidak ada laporan untuk jabatan yang dipilih.</p>
               }
 
               // 2. Group by Employee
-              const groupedLogs = filteredLogs.reduce((acc, log) => {
+              
+              /* totalPages */
+              const startIndex = (currentPage - 1) * itemsPerPage;
+              const currentLogs = filteredLogs.slice(startIndex, startIndex + itemsPerPage);
+
+              const groupedLogs = currentLogs.reduce((acc, log) => {
                 const name = log.employee_name
                 if (!acc[name]) acc[name] = []
                 acc[name].push(log)
@@ -169,8 +196,29 @@ export function HRDailyLogPage() {
                   </div>
                 ))
             })()}
+
           </div>
         )}
+        
+        {/* Pagination UI */}
+        {logs.length > 0 && Math.ceil(logs.filter(log => {
+                if (roleFilter !== 'ALL' && log.employee_role !== roleFilter) return false;
+                if (search && !(
+                  log.employee_name.toLowerCase().includes(search.toLowerCase()) || 
+                  log.activity.toLowerCase().includes(search.toLowerCase()) || 
+                  (log.issue && log.issue.toLowerCase().includes(search.toLowerCase()))
+                )) return false;
+                return true;
+              }).length / 10) > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', padding: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+            <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>Halaman {currentPage}</span>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <Button variant="ghost" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>Prev</Button>
+              <Button variant="ghost" onClick={() => setCurrentPage(p => p + 1)}>Next</Button>
+            </div>
+          </div>
+        )}
+
       </GlassPanel>
     </div>
   )

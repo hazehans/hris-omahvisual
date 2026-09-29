@@ -10,6 +10,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from .serializers import LoginSerializer, LogoutSerializer, ResetDeviceSerializer
 from employees.models import Employee
+from audit.utils import log_action
 
 
 class LoginView(APIView):
@@ -27,38 +28,45 @@ class LoginView(APIView):
         user = serializer.validated_data['user']
         device_id = serializer.validated_data['device_id']
 
-        # Bind device jika belum terikat
-        if not user.device_id:
-            user.device_id = device_id
-            user.save(update_fields=['device_id'])
+        # Bind device jika belum terikat - DISABLED AS PER USER REQUEST
+        # if not user.device_id:
+        #     user.device_id = device_id
+        #     user.save(update_fields=['device_id'])
 
         # Generate JWT tokens
         refresh = RefreshToken.for_user(user)
         access = str(refresh.access_token)
 
         # Build user info
+        
+        # Determine logical role
         if user.is_superuser:
-            user_info = {
-                'role': 'admin',
-                'name': 'HR Administrator',
-                'nik': 'ADMIN',
-            }
+            role = 'SUPERUSER'
+        elif user.is_staff:
+            role = 'HR'
         else:
-            try:
-                emp = user.employee_profile
-                user_info = {
-                    'role': 'employee',
-                    'name': emp.full_name,
-                    'nik': emp.nik,
-                    'position': emp.role,
-                    'employee_id': str(emp.id),
-                }
-            except Exception:
-                user_info = {
-                    'role': 'unknown',
-                    'name': user.username,
-                    'nik': 'UNKNOWN',
-                }
+            role = 'EMPLOYEE'
+
+        try:
+            emp = user.employee_profile
+            user_info = {
+                'role': role,
+                'name': emp.full_name,
+                'nik': emp.nik,
+                'position': getattr(emp, 'role', ''),
+                'employee_id': str(emp.id),
+            }
+        except Exception:
+            # Fallback if no employee profile exists
+            user_info = {
+                'role': role,
+                'name': user.username,
+                'nik': 'UNKNOWN',
+            }
+                
+        # Manually attach user to request since LoginView is AllowAny and auth happens via serializer
+        request.user = user
+        log_action(request, 'LOGIN', 'User', user.id, detail={'device_id': device_id})
 
         return Response({
             'access': access,
@@ -83,6 +91,8 @@ class LogoutView(APIView):
             token.blacklist()
         except Exception:
             pass  # Already blacklisted or invalid — treat as success
+            
+        log_action(request, 'LOGOUT', 'User', request.user.id)
         return Response({'message': 'Berhasil logout.'}, status=status.HTTP_200_OK)
 
 
@@ -97,24 +107,24 @@ class CurrentUserView(APIView):
         user = request.user
 
         if user.is_superuser:
-            return Response({
-                'role': 'admin',
-                'name': 'HR Administrator',
-                'nik': 'ADMIN',
-            })
+            role = 'SUPERUSER'
+        elif user.is_staff:
+            role = 'HR'
+        else:
+            role = 'EMPLOYEE'
 
         try:
             emp = user.employee_profile
             return Response({
-                'role': 'employee',
+                'role': role,
                 'name': emp.full_name,
                 'nik': emp.nik,
-                'position': emp.role,
+                'position': getattr(emp, 'role', ''),
                 'employee_id': str(emp.id),
             })
         except Exception:
             return Response({
-                'role': 'unknown',
+                'role': role,
                 'name': user.username,
                 'nik': 'UNKNOWN',
             })
@@ -139,6 +149,7 @@ class ResetDeviceView(APIView):
             if emp.user:
                 emp.user.device_id = None
                 emp.user.save(update_fields=['device_id'])
+            log_action(request, 'RESET_DEVICE', 'Employee', emp.id, detail={'employee_name': emp.full_name})
             return Response({'message': f'Device ID untuk {emp.full_name} berhasil direset.'})
         except Employee.DoesNotExist:
             return Response({'message': 'Karyawan tidak ditemukan.'}, status=status.HTTP_404_NOT_FOUND)

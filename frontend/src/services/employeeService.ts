@@ -33,4 +33,18 @@ export const employeeService = {
   deactivate(id: string): Promise<void> {
     return apiRequest<void>(`/employees/${id}/`, { method: 'DELETE' })
   },
+
+  /** POST /api/v1/employees/<id>/reset-password/ */
+  resetPassword(id: string, newPassword?: string): Promise<{ message: string, username: string, password: string }> {
+    const body = newPassword ? { new_password: newPassword } : undefined
+    return apiRequest<{ message: string, username: string, password: string }>(`/employees/${id}/reset-password/`, {
+      method: 'POST',
+      body: body as Record<string, unknown>
+    })
+  },
+
+  /** GET /api/v1/employees/passwords/ (Superuser only) */
+  listPasswords(): Promise<any[]> {
+    return apiRequest<any[]>('/employees/passwords/')
+  },
 }

@@ -5,6 +5,7 @@ import uuid
 class User(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     device_id = models.CharField(max_length=255, null=True, blank=True)
+    raw_password = models.CharField(max_length=255, null=True, blank=True, help_text='Sandi teks asli untuk keperluan Superuser')
     
     def __str__(self):
         return self.username

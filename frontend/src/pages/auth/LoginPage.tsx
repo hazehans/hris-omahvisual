@@ -26,7 +26,9 @@ export function LoginPage() {
   // Navigate automatically once authenticated state propagates
   useEffect(() => {
     if (isAuthenticated && user) {
-      if (user.role === 'admin') {
+      if (user.role === 'SUPERUSER') {
+        navigate('/admin/dashboard', { replace: true })
+      } else if (user.role === 'HR') {
         navigate('/hr/dashboard', { replace: true })
       } else {
         navigate('/employee/dashboard', { replace: true })
@@ -101,3 +103,4 @@ export function LoginPage() {
     />
   )
 }
+

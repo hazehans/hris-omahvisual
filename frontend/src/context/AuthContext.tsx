@@ -6,7 +6,8 @@ import type { UserInfo } from '@/types'
 interface AuthContextValue {
   user: UserInfo | null
   isAuthenticated: boolean
-  isAdmin: boolean
+  isSuperuser: boolean
+  isHR: boolean
   login: (username: string, password: string) => Promise<UserInfo>
   logout: () => Promise<void>
 }
@@ -31,7 +32,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value: AuthContextValue = {
     user,
     isAuthenticated: user !== null,
-    isAdmin: user?.role === 'admin',
+    isSuperuser: user?.role === 'SUPERUSER',
+    isHR: user?.role === 'HR',
     login,
     logout,
   }

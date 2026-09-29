@@ -23,6 +23,10 @@ export function HRLeavePage() {
   const [leaves, setLeaves] = useState<LeaveRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+  const [dateFilter, setDateFilter] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
 
   // Approve modal
   const [approveTarget, setApproveTarget] = useState<LeaveRequest | null>(null)
@@ -72,6 +76,15 @@ export function HRLeavePage() {
 
   const mediaBase = API_BASE.replace('/api/v1', '')
 
+  const filtered = leaves.filter(l => {
+    if (search && !(l.employee_name.toLowerCase().includes(search.toLowerCase()) || l.reason.toLowerCase().includes(search.toLowerCase()))) return false
+    if (dateFilter && !(l.start_date <= dateFilter && l.end_date >= dateFilter)) return false
+    return true
+  })
+  const totalPages = Math.ceil(filtered.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const currentLeaves = filtered.slice(startIndex, startIndex + itemsPerPage)
+
   if (loading) {
     return (
       <div className={styles.loading}>
@@ -94,7 +107,7 @@ export function HRLeavePage() {
             color: 'rgba(255,255,255,0.85)', font: 'inherit', cursor: 'pointer',
             fontSize: '0.875rem', fontWeight: tab === 'PENDING' ? 600 : 400,
           }}
-          onClick={() => setTab('PENDING')}
+          onClick={() => { setTab('PENDING'); setCurrentPage(1); }}
         >
           Menunggu Persetujuan
           {tab === 'PENDING' && leaves.length > 0 && (
@@ -110,10 +123,30 @@ export function HRLeavePage() {
             color: 'rgba(255,255,255,0.85)', font: 'inherit', cursor: 'pointer',
             fontSize: '0.875rem', fontWeight: tab === 'HISTORY' ? 600 : 400,
           }}
-          onClick={() => setTab('HISTORY')}
+          onClick={() => { setTab('HISTORY'); setCurrentPage(1); }}
         >
           Riwayat Persetujuan
         </button>
+      </div>
+
+      <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+        <div className={styles.searchWrap}>
+          <input
+            className={styles.searchInput}
+            type="search"
+            placeholder="Cari nama, alasan..."
+            value={search}
+            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+          />
+        </div>
+        <div>
+          <input 
+            type="date" 
+            value={dateFilter} 
+            onChange={e => { setDateFilter(e.target.value); setCurrentPage(1); }} 
+            style={{ padding: '0.4rem 0.75rem', borderRadius: '0.25rem', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.875rem', colorScheme: 'dark' }}
+          />
+        </div>
       </div>
 
       <GlassPanel>
@@ -139,7 +172,7 @@ export function HRLeavePage() {
                 </tr>
               </thead>
               <tbody>
-                {leaves.map(l => {
+                {currentLeaves.map((l: any) => {
                   const created = new Date(l.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
                   return (
                     <tr key={l.id}>
@@ -189,6 +222,17 @@ export function HRLeavePage() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Pagination UI */}
+        {totalPages > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', padding: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+            <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>Halaman {currentPage} dari {totalPages}</span>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <Button variant="ghost" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>Prev</Button>
+              <Button variant="ghost" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>Next</Button>
+            </div>
           </div>
         )}
       </GlassPanel>

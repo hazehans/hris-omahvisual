@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { employeeService } from '@/services/employeeService'
 import type { Employee, ContractType, Gender } from '@/types'
 import styles from './HREmployeesPage.module.css'
+import { useAuth } from '@/context/AuthContext'
 
 const EMPTY_FORM: Partial<Employee> = {
   nik: '', full_name: '', nickname: '', role: '',
@@ -22,6 +23,11 @@ export function HREmployeesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [filterRole, setFilterRole] = useState('ALL')
+  const [filterStatus, setFilterStatus] = useState('ALL')
+  const [filterContract, setFilterContract] = useState('ALL')
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false)
@@ -29,6 +35,49 @@ export function HREmployeesPage() {
   const [form, setForm] = useState<Partial<Employee>>(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+
+  // Password Management
+  const { user } = useAuth()
+  const [pwdModalOpen, setPwdModalOpen] = useState(false)
+  const [pwdEmp, setPwdEmp] = useState<Employee | null>(null)
+  const [pwdResult, setPwdResult] = useState<{message?: string, username: string, password: string, error?: string} | null>(null)
+  const [rawPwd, setRawPwd] = useState<string>('')
+  const [newPwdInput, setNewPwdInput] = useState('')
+  const [resettingPwd, setResettingPwd] = useState(false)
+
+  const openPwdModal = async (emp: Employee) => {
+    setPwdEmp(emp)
+    setPwdResult(null)
+    setNewPwdInput('')
+    setPwdModalOpen(true)
+    
+    if (user?.role === 'SUPERUSER') {
+      try {
+        const list = await employeeService.listPasswords()
+        const found = list.find(l => l.employee_id === emp.id)
+        setRawPwd(found?.raw_password || 'Belum diatur')
+      } catch {
+        setRawPwd('Error')
+      }
+    }
+  }
+
+  const handleResetPwd = async () => {
+    if (!pwdEmp) return
+    setResettingPwd(true)
+    try {
+      const res = await employeeService.resetPassword(pwdEmp.id, user?.role === 'SUPERUSER' && newPwdInput ? newPwdInput : undefined)
+      setPwdResult(res)
+      if (user?.role === 'SUPERUSER') {
+        setRawPwd(res.password)
+      }
+    } catch (err: any) {
+      setPwdResult({ username: '', password: '', error: err.message || 'Gagal mereset sandi' })
+    } finally {
+      setResettingPwd(false)
+    }
+  }
+
 
   const fetchEmployees = useCallback(async () => {
     setLoading(true)
@@ -46,6 +95,13 @@ export function HREmployeesPage() {
   useEffect(() => { void fetchEmployees() }, [fetchEmployees])
 
   const filtered = employees.filter(e => {
+    if (filterRole !== 'ALL' && e.role !== filterRole) return false
+    if (filterStatus !== 'ALL') {
+      const wantActive = filterStatus === 'ACTIVE'
+      if (e.is_active !== wantActive) return false
+    }
+    if (filterContract !== 'ALL' && e.contract_type !== filterContract) return false
+
     if (!search.trim()) return true
     const q = search.toLowerCase()
     return (
@@ -54,6 +110,14 @@ export function HREmployeesPage() {
       e.role.toLowerCase().includes(q)
     )
   })
+
+  const resetFilters = () => {
+    setSearch('')
+    setFilterRole('ALL')
+    setFilterStatus('ALL')
+    setFilterContract('ALL')
+    setCurrentPage(1)
+  }
 
   function openAdd() {
     setEditTarget(null)
@@ -115,6 +179,10 @@ export function HREmployeesPage() {
     PKWT: 'accent', PKWTT: 'success', FREELANCE: 'neutral', INTERN: 'warn',
   }
 
+  const totalPages = Math.ceil(filtered.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const currentEmployees = filtered.slice(startIndex, startIndex + itemsPerPage)
+
   if (loading) {
     return (
       <div className={styles.loading}>
@@ -129,15 +197,36 @@ export function HREmployeesPage() {
       <GlassPanel>
         {/* Header */}
         <div className={styles.tableHeader}>
-          <div className={styles.searchWrap}>
+          <div className={styles.searchWrap} style={{ flex: '1 1 200px' }}>
             <input
               className={styles.searchInput}
               type="search"
               placeholder="Cari nama, NIK, jabatan…"
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={e => {
+                setSearch(e.target.value)
+                setCurrentPage(1)
+              }}
             />
           </div>
+          <select value={filterRole} onChange={e => { setFilterRole(e.target.value); setCurrentPage(1); }} style={{ padding: '0.4rem', borderRadius: '4px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)' }}>
+            <option value="ALL">Semua Jabatan</option>
+            {Array.from(new Set(employees.map(e => e.role))).sort().map(r => (
+              <option key={r} value={r}>{r}</option>
+            ))}
+          </select>
+          <select value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setCurrentPage(1); }} style={{ padding: '0.4rem', borderRadius: '4px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)' }}>
+            <option value="ALL">Semua Status</option>
+            <option value="ACTIVE">Aktif</option>
+            <option value="INACTIVE">Nonaktif</option>
+          </select>
+          <select value={filterContract} onChange={e => { setFilterContract(e.target.value); setCurrentPage(1); }} style={{ padding: '0.4rem', borderRadius: '4px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)' }}>
+            <option value="ALL">Semua Kontrak</option>
+            {Array.from(new Set(employees.map(e => e.contract_type))).sort().map(c => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+          <Button variant="ghost" onClick={resetFilters}>Reset</Button>
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             <Badge tone="neutral">{filtered.length} karyawan</Badge>
             <Button variant="primary" onClick={openAdd}>+ Tambah Karyawan</Button>
@@ -163,7 +252,7 @@ export function HREmployeesPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(emp => (
+                {currentEmployees.map(emp => (
                   <tr key={emp.id}>
                     <td className={styles.nameCell}>
                       {emp.full_name}
@@ -185,6 +274,8 @@ export function HREmployeesPage() {
                     <td>
                       <div className={styles.actions}>
                         <Button variant="ghost" onClick={() => openEdit(emp)}>Edit</Button>
+                          <Button variant="ghost" onClick={() => openPwdModal(emp)}>?? Sandi</Button>
+                          <Button variant="ghost" onClick={() => openPwdModal(emp)}>🔑 Sandi</Button>
                         {emp.is_active && (
                           <Button variant="danger" onClick={() => void handleDeactivate(emp)}>
                             Nonaktifkan
@@ -196,6 +287,17 @@ export function HREmployeesPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+        
+        {/* Pagination UI */}
+        {totalPages > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', padding: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+            <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>Halaman {currentPage} dari {totalPages}</span>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <Button variant="ghost" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>Prev</Button>
+              <Button variant="ghost" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>Next</Button>
+            </div>
           </div>
         )}
       </GlassPanel>
@@ -285,6 +387,75 @@ export function HREmployeesPage() {
         </div>,
         document.body
       )}
+
+      {/* Password Management Modal */}
+      {pwdModalOpen && pwdEmp && createPortal(
+        <div className={styles.overlay}>
+          <div className={styles.modal} style={{ padding: '2rem' }}>
+            <div className={styles.modalHeader}>
+              <div>
+                <h2 className={styles.modalTitle}>Manajemen Sandi Karyawan</h2>
+                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.875rem', opacity: 0.7 }}>Atur akses login Web App untuk <strong>{pwdEmp.full_name}</strong> (NIK: {pwdEmp.nik})</p>
+              </div>
+              <button type="button" className={styles.closeBtn} onClick={() => setPwdModalOpen(false)}>X</button>
+            </div>
+
+            <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {user?.role === 'SUPERUSER' ? (
+                <>
+                  <div style={{ padding: '1rem', background: 'rgba(0,0,0,0.3)', borderRadius: '8px' }}>
+                    <span style={{ fontSize: '0.875rem', opacity: 0.7 }}>Sandi Saat Ini (Teks Asli):</span>
+                    <p style={{ fontFamily: 'monospace', fontSize: '1.25rem', marginTop: '0.25rem', color: '#10b981' }}>{rawPwd}</p>
+                  </div>
+                  
+                  <div className={styles.fieldGroup}>
+                    <label>Setel Sandi Baru (Opsional)</label>
+                    <input 
+                      type="text" 
+                      className={styles.input} 
+                      placeholder="Ketik password baru (atau kosongkan untuk acak otomatis)"
+                      value={newPwdInput}
+                      onChange={(e) => setNewPwdInput(e.target.value)}
+                    />
+                  </div>
+                  
+                  <Button variant="primary" onClick={handleResetPwd} disabled={resettingPwd}>
+                    {resettingPwd ? 'Menyimpan...' : 'Simpan / Reset Sandi'}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p style={{ fontSize: '0.875rem', color: '#fbbf24', background: 'rgba(251, 191, 36, 0.1)', padding: '1rem', borderRadius: '8px' }}>
+                    Sandi asli disembunyikan. Anda hanya bisa menghasilkan One-Time Password (OTP) 6 digit acak yang baru.
+                  </p>
+                  <Button variant="primary" onClick={handleResetPwd} disabled={resettingPwd}>
+                    {resettingPwd ? 'Memproses...' : 'Generate OTP Baru'}
+                  </Button>
+                </>
+              )}
+
+              {pwdResult && !pwdResult.error && (
+                <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                  <p style={{ color: '#10b981', fontWeight: 600, marginBottom: '0.5rem' }}>?? {pwdResult.message}</p>
+                  <p style={{ fontSize: '0.875rem' }}>Username: <strong style={{ color: 'white' }}>{pwdResult.username}</strong></p>
+                  <p style={{ fontSize: '0.875rem' }}>Password Baru: <strong style={{ color: 'white' }}>{pwdResult.password}</strong></p>
+                  <p style={{ fontSize: '0.75rem', opacity: 0.6, marginTop: '0.5rem' }}>Silakan berikan informasi ini kepada karyawan yang bersangkutan.</p>
+                </div>
+              )}
+
+              {pwdResult?.error && (
+                <p style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.5rem' }}>? Error: {pwdResult.error}</p>
+              )}
+            </div>
+
+            <div className={styles.formActions} style={{ marginTop: '2rem' }}>
+              <Button variant="ghost" onClick={() => setPwdModalOpen(false)}>Tutup</Button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
     </div>
   )
 }

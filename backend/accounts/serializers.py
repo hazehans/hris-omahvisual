@@ -46,13 +46,13 @@ class LoginSerializer(serializers.Serializer):
                 code='ACCOUNT_INACTIVE'
             )
 
-        # Device binding check
-        if not user.is_superuser:
-            if user.device_id and user.device_id != device_id:
-                raise serializers.ValidationError(
-                    'Device tidak dikenali. Hubungi Admin untuk reset Device ID.',
-                    code='DEVICE_MISMATCH'
-                )
+        # Device binding check - DISABLED AS PER USER REQUEST
+        # if not user.is_superuser:
+        #     if user.device_id and user.device_id != device_id:
+        #         raise serializers.ValidationError(
+        #             'Device tidak dikenali. Hubungi Admin untuk reset Device ID.',
+        #             code='DEVICE_MISMATCH'
+        #         )
 
         attrs['user'] = user
         attrs['device_id'] = device_id

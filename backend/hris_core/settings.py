@@ -52,9 +52,7 @@ INSTALLED_APPS = [
     'attendance',
     'daily_report',
     'leave',
-    'contracts',
-    'roster',
-    'dashboard',
+    'audit',
 ]
 
 MIDDLEWARE = [
@@ -217,6 +215,10 @@ CELERY_TIMEZONE = 'Asia/Jakarta'
 from celery.schedules import crontab
 
 CELERY_BEAT_SCHEDULE = {
+    'sync-hikvision-attendance': {
+        'task': 'attendance.tasks.sync_hikvision_events',
+        'schedule': crontab(minute='*/10'),  # Every 10 minutes
+    },
     # Fase 6 — Leave: Auto-reject pengajuan PENDING di H-1 pukul 23:59
     'auto-reject-pending-leaves': {
         'task': 'leave.auto_reject_pending_leaves',

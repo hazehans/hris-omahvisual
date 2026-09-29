@@ -7,6 +7,7 @@ import { LoginPage } from '@/pages/auth/LoginPage'
 import { HRLayout } from '@/pages/hr/HRLayout'
 import { HRDashboardPage } from '@/pages/hr/HRDashboardPage'
 import { HRAttendancePage } from '@/pages/hr/HRAttendancePage'
+import { HRRawLogsPage } from '@/pages/hr/HRRawLogsPage'
 import { HREmployeesPage } from '@/pages/hr/HREmployeesPage'
 import { HRDailyLogPage } from '@/pages/hr/HRDailyLogPage'
 import { HRLeavePage } from '@/pages/hr/HRLeavePage'
@@ -15,6 +16,12 @@ import { EmployeeDashboardPage } from '@/pages/employee/EmployeeDashboardPage'
 import { EmployeeAttendancePage } from '@/pages/employee/EmployeeAttendancePage'
 import { EmployeeDailyLogPage } from '@/pages/employee/EmployeeDailyLogPage'
 import { EmployeeLeavePage } from '@/pages/employee/EmployeeLeavePage'
+
+import { SuperuserLayout } from '@/pages/admin/SuperuserLayout'
+import { DeviceManagementPage } from '@/pages/admin/DeviceManagementPage'
+import { AuditLogPage } from '@/pages/admin/AuditLogPage'
+
+import { SuperuserDashboardPage } from '@/pages/admin/SuperuserDashboardPage'
 
 // ─── Guards ─────────────────────────────────────────────────────────────────
 
@@ -25,17 +32,25 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 }
 
 
-function RequireAdmin({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isAdmin } = useAuth()
+function RequireSuperuser({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isSuperuser } = useAuth()
   if (!isAuthenticated) return <Navigate to="/login" replace />
-  if (!isAdmin) return <Navigate to="/login" replace />
+  if (!isSuperuser) return <Navigate to="/login" replace />
+  return <>{children}</>
+}
+
+function RequireHR({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isHR, isSuperuser } = useAuth()
+  if (!isAuthenticated) return <Navigate to="/login" replace />
+  if (!isHR && !isSuperuser) return <Navigate to="/login" replace />
   return <>{children}</>
 }
 
 function RootRedirect() {
-  const { isAuthenticated, isAdmin } = useAuth()
+  const { isAuthenticated, isSuperuser, isHR } = useAuth()
   if (!isAuthenticated) return <Navigate to="/login" replace />
-  if (isAdmin) return <Navigate to="/hr/dashboard" replace />
+  if (isSuperuser) return <Navigate to="/admin/dashboard" replace />
+  if (isHR) return <Navigate to="/hr/dashboard" replace />
   return <Navigate to="/employee/dashboard" replace />
 }
 
@@ -47,13 +62,33 @@ export function AppRouter() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
 
-        {/* HR Routes */}
+        {/* Superuser / Admin Routes */}
+        <Route
+          path="/admin"
+          element={
+            <RequireSuperuser>
+              <SuperuserLayout />
+            </RequireSuperuser>
+          }
+        >
+          <Route index element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="dashboard" element={<SuperuserDashboardPage />} />
+          <Route path="device" element={<DeviceManagementPage />} />
+          <Route path="audit" element={<AuditLogPage />} />
+          <Route path="employees" element={<HREmployeesPage />} />
+          <Route path="attendance" element={<HRAttendancePage />} />
+          <Route path="raw-logs" element={<HRRawLogsPage />} />
+          <Route path="daily-log" element={<HRDailyLogPage />} />
+          <Route path="leave" element={<HRLeavePage />} />
+        </Route>
+
+        {/* HR Routes (Keeping for backward compatibility if needed, otherwise admin takes over) */}
         <Route
           path="/hr"
           element={
-            <RequireAdmin>
+            <RequireHR>
               <HRLayout />
-            </RequireAdmin>
+            </RequireHR>
           }
         >
           <Route index element={<Navigate to="/hr/dashboard" replace />} />
@@ -87,3 +122,4 @@ export function AppRouter() {
     </BrowserRouter>
   )
 }
+

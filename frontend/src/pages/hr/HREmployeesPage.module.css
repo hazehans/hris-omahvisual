@@ -1,4 +1,13 @@
 /* HREmployeesPage.module.css */
+.pillInput {
+  border-radius: var(--radius-pill, 9999px) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+.pillInput:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
 .page { display: flex; flex-direction: column; gap: 1.5rem; }
 
 .loading {

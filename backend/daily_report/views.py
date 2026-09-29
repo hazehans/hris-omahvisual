@@ -13,7 +13,7 @@ class DailyLogListCreateAPIView(generics.ListCreateAPIView):
         user = self.request.user
         date_filter = self.request.query_params.get('date', datetime.date.today())
 
-        if user.is_superuser:
+        if user.is_staff or user.is_superuser:
             if date_filter == 'ALL':
                 return DailyLog.objects.all().order_by('-created_at')
             return DailyLog.objects.filter(date=date_filter).order_by('-created_at')

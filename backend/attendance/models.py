@@ -1,41 +1,48 @@
-import uuid
 from django.db import models
-from employees.models import Employee
+
+class HikvisionRawEvent(models.Model):
+    device_serial = models.CharField(max_length=100, default='default')
+    serial_no = models.BigIntegerField()
+    event_time = models.DateTimeField()  # parsed from time field
+    major = models.IntegerField()
+    minor = models.IntegerField()
+    employee_no = models.CharField(max_length=50, blank=True, default='')
+    name_on_device = models.CharField(max_length=255, blank=True, default='')
+    card_no = models.CharField(max_length=100, blank=True, default='')
+    card_type = models.CharField(max_length=50, blank=True, default='')
+    card_reader_no = models.IntegerField(null=True, blank=True)
+    door_no = models.IntegerField(null=True, blank=True)
+    verify_mode = models.CharField(max_length=100, blank=True, default='')
+    attendance_status = models.CharField(max_length=50, blank=True, default='')  # checkIn, checkOut
+    attendance_label = models.CharField(max_length=100, blank=True, default='')  # Clock-In, Clock-Out
+    user_type = models.CharField(max_length=50, blank=True, default='')
+    raw_payload = models.JSONField()
+    fetched_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'hikvision_raw_event'
+        unique_together = [('device_serial', 'serial_no')]
+        ordering = ['-event_time']
 
 class AttendanceLog(models.Model):
-    SOURCE_CHOICES = [
-        ('HIKVISION_MACHINE', 'Mesin Hikvision'),
-        ('WEB_LED_MODE', 'Web - Mode LED'),
-        ('WEB_RENTAL', 'Web - Rental'),
-        ('MANUAL_BY_HR', 'Manual HR'),
+    ATTENDANCE_TYPE_CHOICES = [
+        ('IN', 'Clock In'),
+        ('OUT', 'Clock Out'),
     ]
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='attendance_logs')
-    date = models.DateField(verbose_name="Tanggal Absen")
     
-    # Waktu Jam Masuk & Pulang
-    clock_in = models.DateTimeField(null=True, blank=True)
-    clock_out = models.DateTimeField(null=True, blank=True)
-    
-    # Sumber Data (Fokus utama kita HIKVISION_MACHINE)
-    source = models.CharField(max_length=50, choices=SOURCE_CHOICES, default='HIKVISION_MACHINE')
-    
-    # Lokasi & Foto (Untuk tim lapangan kedepannya)
-    latitude = models.FloatField(null=True, blank=True)
-    longitude = models.FloatField(null=True, blank=True)
-    photo_evidence = models.ImageField(upload_to='attendance_photos/', null=True, blank=True)
-    
-    # Flag Pelanggaran & Lembur
-    is_late = models.BooleanField(default=False)
-    is_overtime = models.BooleanField(default=False)
-    overtime_duration = models.DurationField(null=True, blank=True)
-    
-    # KPI Score (Nilai Poin Absen Harian)
-    kpi_score = models.IntegerField(null=True, blank=True, verbose_name="Poin KPI")
-
-    def __str__(self):
-        return f"{self.employee.full_name} - {self.date}"
+    employee = models.ForeignKey('employees.Employee', on_delete=models.CASCADE, related_name='attendance_logs')
+    raw_event = models.OneToOneField(HikvisionRawEvent, on_delete=models.SET_NULL, null=True, blank=True, related_name='attendance_record')
+    attendance_date = models.DateField()
+    event_time = models.DateTimeField()
+    attendance_type = models.CharField(max_length=10, choices=ATTENDANCE_TYPE_CHOICES)  # IN or OUT
+    verification_mode = models.CharField(max_length=100, blank=True, default='')
+    source = models.CharField(max_length=50, default='hikvision')
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'attendance_log'
+        ordering = ['-event_time']
+        indexes = [
+            models.Index(fields=['employee', 'attendance_date']),
+            models.Index(fields=['attendance_date']),
+        ]

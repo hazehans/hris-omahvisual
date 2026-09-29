@@ -5,13 +5,14 @@ from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 from .models import LeaveRequest
 from .serializers import LeaveRequestSerializer
+from audit.utils import log_action
 
 class LeaveRequestAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        if request.user.is_superuser:
-            # HR: get filter type (pending vs history)
+        if request.user.is_staff or request.user.is_superuser:
+            # HR/Superuser: get filter type (pending vs history)
             status_filter = request.query_params.get('status', 'PENDING')
             if status_filter == 'ALL_HISTORY':
                 leaves = LeaveRequest.objects.exclude(status='PENDING').order_by('-reviewed_at')
@@ -40,6 +41,7 @@ class LeaveRequestAPIView(APIView):
                 reason=request.data.get('reason'),
                 attachment=attachment
             )
+            log_action(request, 'LEAVE_CREATE', 'LeaveRequest', leave.id, detail={'leave_type': leave.leave_type})
             return Response({'message': 'Berhasil diajukan! Menunggu persetujuan HR.'}, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
@@ -48,7 +50,7 @@ class LeaveApprovalAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
-        if not request.user.is_superuser:
+        if not (request.user.is_staff or request.user.is_superuser):
             return Response({'error': 'Hanya HR yang bisa menyetujui!'}, status=status.HTTP_403_FORBIDDEN)
         
         try:
@@ -68,6 +70,8 @@ class LeaveApprovalAPIView(APIView):
             leave.approved_by = request.user
             leave.reviewed_at = timezone.now()
             leave.save()
+            
+            log_action(request, f'LEAVE_{action}', 'LeaveRequest', leave.id)
             
             return Response({'message': f'Pengajuan berhasil di-{action.lower()}!'})
         except Exception as e:

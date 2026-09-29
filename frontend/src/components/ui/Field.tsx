@@ -8,7 +8,7 @@ interface FieldShellProps {
   className?: string
 }
 
-function FieldShell({ label, children, className = '' }: FieldShellProps) {
+export function FieldShell({ label, children, className = '' }: FieldShellProps) {
   return (
     <label className={`${styles.field} ${className}`.trim()}>
       <span className={styles.label}>{label}</span>

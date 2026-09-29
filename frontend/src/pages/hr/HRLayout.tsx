@@ -13,6 +13,7 @@ type HRPageId = 'dashboard' | 'attendance' | 'employees' | 'daily-log' | 'leave'
 const HR_PAGES: AppPage<HRPageId>[] = [
   { id: 'dashboard',  label: 'Dashboard',    description: 'Overview & Statistik HRIS',      icon: '◎' },
   { id: 'attendance', label: 'Live Absensi', description: 'Pantau kehadiran hari ini',        icon: '◷' },
+  
   { id: 'employees',  label: 'Karyawan',     description: 'Manajemen data karyawan',          icon: '◈' },
   { id: 'daily-log',  label: 'Daily Log',    description: 'Laporan aktivitas harian',          icon: '◧' },
   { id: 'leave',      label: 'Izin & Cuti',  description: 'Persetujuan pengajuan karyawan',   icon: '◫' },
@@ -80,7 +81,7 @@ export function HRLayout() {
       menuOpenLabel="Buka menu akun"
       menuCloseLabel="Tutup menu akun"
       onLanguageChange={handleLanguageChange}
-      userLabel={user ? `${user.name} (${user.role === 'admin' ? 'HR Admin' : 'Karyawan'})` : undefined}
+      userLabel={user ? `${user.name} (${user.role === 'SUPERUSER' ? 'Admin' : user.role})` : undefined}
       logoutLabel="Keluar"
       onLogout={() => void handleLogout()}
     >
@@ -88,3 +89,6 @@ export function HRLayout() {
     </AppShell>
   )
 }
+
+
+

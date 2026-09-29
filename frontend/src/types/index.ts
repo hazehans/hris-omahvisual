@@ -11,7 +11,7 @@ export interface LoginPayload {
 }
 
 export interface UserInfo {
-  role: 'admin' | 'employee' | 'unknown'
+  role: 'SUPERUSER' | 'HR' | 'EMPLOYEE' | 'unknown'
   name: string
   nik: string
   position?: string
@@ -67,13 +67,97 @@ export interface Employee {
 
 // ===== ATTENDANCE =====
 
-export interface AttendanceTodayItem {
-  name: string
-  nik: string
-  clock_in: string  // "HH:MM:SS" or "-"
-  clock_out: string  // "HH:MM:SS" or "-"
-  is_late: boolean
-  kpi_score: number | 'Belum Dihitung'
+export interface AttendanceEvent {
+  time: string;
+  type: 'IN' | 'OUT';
+  verification_mode: string;
+}
+
+export interface AttendanceTodaySummary {
+  employee_id: number;
+  employee_name: string;
+  employee_nik: string;
+  date: string;
+  first_in: string | null;
+  last_out: string | null;
+  total_events: number;
+  is_late: boolean;
+  events: AttendanceEvent[];
+}
+
+export interface AttendanceRecord {
+  id: number;
+  employee: number;
+  employee_name: string;
+  employee_nik: string;
+  hikvision_id: string;
+  attendance_date: string;
+  event_time: string;
+  attendance_type: 'IN' | 'OUT';
+  verification_mode: string;
+  source: string;
+  created_at: string;
+}
+
+export interface HikvisionRawEvent {
+  id: number;
+  device_serial: string;
+  serial_no: number;
+  event_time: string;
+  major: number;
+  minor: number;
+  employee_no: string;
+  name_on_device: string;
+  card_no: string;
+  card_type: string;
+  card_reader_no: number | null;
+  door_no: number | null;
+  verify_mode: string;
+  attendance_status: string;
+  attendance_label: string;
+  user_type: string;
+  raw_payload: Record<string, unknown>;
+  fetched_at: string;
+}
+
+export interface DeviceInfo {
+  status: 'online' | 'offline';
+  user_count?: {
+    userNumber: number;
+    bindFaceUserNumber: number;
+    bindFingerprintUserNumber: number;
+    bindCardUserNumber: number;
+  };
+  error?: string;
+}
+
+export interface DeviceUser {
+  employeeNo: string;
+  name: string;
+  userType: string;
+  Valid: { enable: boolean; beginTime: string; endTime: string };
+  doorRight: string;
+  gender: string;
+  numOfCard: number;
+  numOfFP: number;
+  numOfFace: number;
+}
+
+export interface DeviceCard {
+  employeeNo: string;
+  cardNo: string;
+  cardType: string;
+}
+
+export interface AuditLogEntry {
+  id: number;
+  username: string | null;
+  action: string;
+  target_type: string | null;
+  target_id: string | null;
+  detail: Record<string, unknown> | null;
+  ip_address: string | null;
+  created_at: string;
 }
 
 // ===== DAILY LOG =====
@@ -125,4 +209,28 @@ export interface LeaveCreatePayload {
 export interface LeaveApprovalPayload {
   action: 'APPROVE' | 'REJECT'
   signed_attachment?: File
+}
+export interface SuperuserDashboardData {
+  today_stats: {
+    total: number;
+    present: number;
+    late: number;
+    leave: number;
+    absent: number;
+  };
+  recent_logs: {
+    time: string;
+    name: string;
+    type: string;
+  }[];
+  chart_data: {
+    date: string;
+    present: number;
+    late: number;
+  }[];
+  trend_pct: number;
+  device_info: {
+    status: string;
+    last_sync: string;
+  };
 }
