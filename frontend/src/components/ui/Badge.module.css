@@ -42,6 +42,12 @@
   color: #ffb4ae;
 }
 
+.info {
+  border-color: rgba(90, 200, 250, 0.3);
+  background: rgba(90, 200, 250, 0.12);
+  color: #a8e8ff;
+}
+
 .dot {
   width: 0.42rem;
   height: 0.42rem;

@@ -1,5 +1,5 @@
 import { apiRequest } from './api';
-import type { SuperuserDashboardData, AttendanceTodaySummary, AttendanceRecord, HikvisionRawEvent, DeviceInfo, DeviceUser, DeviceCard } from '../types';
+import type { SuperuserDashboardData, AttendanceTodaySummary, AttendanceRecord, HikvisionRawEvent, RawEventListResponse, DeviceInfo, DeviceUser, DeviceCard } from '../types';
 
 export const attendanceService = {
   today: (date?: string) => 
@@ -32,7 +32,7 @@ export const attendanceService = {
   analytics: (month?: number, year?: number) =>
     apiRequest<Record<string, unknown>>(`/attendance/analytics/?month=${month ?? new Date().getMonth() + 1}&year=${year ?? new Date().getFullYear()}`),
   
-  rawEvents: (params?: { date?: string; employee_no?: string; major?: string; minor?: string; attendance_status?: string; verify_mode?: string }) => {
+  rawEvents: async (params?: { date?: string; employee_no?: string; major?: string; minor?: string; attendance_status?: string; verify_mode?: string; category?: string }): Promise<HikvisionRawEvent[]> => {
     const qs = new URLSearchParams();
     if (params?.date) qs.set('date', params.date);
     if (params?.employee_no) qs.set('employee_no', params.employee_no);
@@ -40,8 +40,11 @@ export const attendanceService = {
     if (params?.minor) qs.set('minor', params.minor);
     if (params?.attendance_status) qs.set('attendance_status', params.attendance_status);
     if (params?.verify_mode) qs.set('verify_mode', params.verify_mode);
+    if (params?.category) qs.set('category', params.category);
     const query = qs.toString();
-    return apiRequest<HikvisionRawEvent[]>(`/attendance/raw-events/${query ? `?${query}` : ''}`);
+    // Backend now returns { count, results: [] } instead of a bare array
+    const res = await apiRequest<RawEventListResponse>(`/attendance/raw-events/${query ? `?${query}` : ''}`);
+    return res.results ?? [];
   },
   
   // Device management

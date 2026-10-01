@@ -10,6 +10,7 @@ urlpatterns = [
     path('analytics/', views.AttendanceAnalyticsView.as_view(), name='attendance-analytics'),
     path('superuser-dashboard/', views.SuperuserDashboardView.as_view(), name='superuser-dashboard'),
     path('raw-events/', views.RawEventListView.as_view(), name='raw-events'),
+    path('raw-events/summary/', views.RawEventSummaryView.as_view(), name='raw-events-summary'),
     
     # Hikvision device management
     path('device-info/', views.HikvisionDeviceInfoView.as_view(), name='device-info'),

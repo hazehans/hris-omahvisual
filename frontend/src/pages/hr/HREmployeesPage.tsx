@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom'
 import { GlassPanel } from '@/components/ui/GlassPanel'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { GlassInput, GlassSelect } from '@/components/ui'
 import { employeeService } from '@/services/employeeService'
 import type { Employee, ContractType, Gender } from '@/types'
 import styles from './HREmployeesPage.module.css'
@@ -40,7 +41,7 @@ export function HREmployeesPage() {
   const { user } = useAuth()
   const [pwdModalOpen, setPwdModalOpen] = useState(false)
   const [pwdEmp, setPwdEmp] = useState<Employee | null>(null)
-  const [pwdResult, setPwdResult] = useState<{message?: string, username: string, password: string, error?: string} | null>(null)
+  const [pwdResult, setPwdResult] = useState<{ message?: string, username: string, password: string, error?: string } | null>(null)
   const [rawPwd, setRawPwd] = useState<string>('')
   const [newPwdInput, setNewPwdInput] = useState('')
   const [resettingPwd, setResettingPwd] = useState(false)
@@ -50,7 +51,7 @@ export function HREmployeesPage() {
     setPwdResult(null)
     setNewPwdInput('')
     setPwdModalOpen(true)
-    
+
     if (user?.role === 'SUPERUSER') {
       try {
         const list = await employeeService.listPasswords()
@@ -195,13 +196,27 @@ export function HREmployeesPage() {
   return (
     <div className={styles.page}>
       <GlassPanel>
-        {/* Header */}
-        <div className={styles.tableHeader}>
-          <div className={styles.searchWrap} style={{ flex: '1 1 200px' }}>
-            <input
-              className={styles.searchInput}
+        {/* ─── Page Header ──────────────────────────────────────────── */}
+        <div className={styles.pageHeader}>
+          <div>
+            <h1 className={styles.pageTitle}>Data Karyawan</h1>
+            <p className={styles.pageSubtitle}>
+              Manajemen seluruh data karyawan aktif dan nonaktif OmahVisual.
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+            <Badge tone="neutral">{filtered.length} karyawan</Badge>
+            <Button variant="primary" onClick={openAdd}>+ Tambah Karyawan</Button>
+          </div>
+        </div>
+
+        {/* ─── Filter bar ──────────────────────────────────────────── */}
+        <div className={styles.filterBar}>
+          <div className={styles.filterSearch}>
+            <GlassInput
+              label="Cari karyawan"
               type="search"
-              placeholder="Cari nama, NIK, jabatan…"
+              placeholder="Nama, NIK, jabatan…"
               value={search}
               onChange={e => {
                 setSearch(e.target.value)
@@ -209,28 +224,41 @@ export function HREmployeesPage() {
               }}
             />
           </div>
-          <select value={filterRole} onChange={e => { setFilterRole(e.target.value); setCurrentPage(1); }} style={{ padding: '0.4rem', borderRadius: '4px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)' }}>
-            <option value="ALL">Semua Jabatan</option>
-            {Array.from(new Set(employees.map(e => e.role))).sort().map(r => (
-              <option key={r} value={r}>{r}</option>
-            ))}
-          </select>
-          <select value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setCurrentPage(1); }} style={{ padding: '0.4rem', borderRadius: '4px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)' }}>
-            <option value="ALL">Semua Status</option>
-            <option value="ACTIVE">Aktif</option>
-            <option value="INACTIVE">Nonaktif</option>
-          </select>
-          <select value={filterContract} onChange={e => { setFilterContract(e.target.value); setCurrentPage(1); }} style={{ padding: '0.4rem', borderRadius: '4px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)' }}>
-            <option value="ALL">Semua Kontrak</option>
-            {Array.from(new Set(employees.map(e => e.contract_type))).sort().map(c => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-          <Button variant="ghost" onClick={resetFilters}>Reset</Button>
-          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-            <Badge tone="neutral">{filtered.length} karyawan</Badge>
-            <Button variant="primary" onClick={openAdd}>+ Tambah Karyawan</Button>
-          </div>
+          <GlassSelect
+            label="Jabatan"
+            value={filterRole}
+            onChange={v => { setFilterRole(v); setCurrentPage(1) }}
+            options={[
+              { value: 'ALL', label: 'Semua Jabatan' },
+              ...Array.from(new Set(employees.map(e => e.role))).sort().map(r => ({ value: r, label: r })),
+            ]}
+            size="default"
+            className={styles.filterSelect}
+          />
+          <GlassSelect
+            label="Status"
+            value={filterStatus}
+            onChange={v => { setFilterStatus(v); setCurrentPage(1) }}
+            options={[
+              { value: 'ALL', label: 'Semua Status' },
+              { value: 'ACTIVE', label: 'Aktif' },
+              { value: 'INACTIVE', label: 'Nonaktif' },
+            ]}
+            size="default"
+            className={styles.filterSelect}
+          />
+          <GlassSelect
+            label="Kontrak"
+            value={filterContract}
+            onChange={v => { setFilterContract(v); setCurrentPage(1) }}
+            options={[
+              { value: 'ALL', label: 'Semua Kontrak' },
+              ...Array.from(new Set(employees.map(e => e.contract_type))).sort().map(c => ({ value: c, label: c })),
+            ]}
+            size="default"
+            className={styles.filterSelect}
+          />
+          <Button variant="danger" onClick={resetFilters}>Reset Filter</Button>
         </div>
 
         {error && <p className={styles.errorMsg}>{error}</p>}
@@ -274,8 +302,7 @@ export function HREmployeesPage() {
                     <td>
                       <div className={styles.actions}>
                         <Button variant="ghost" onClick={() => openEdit(emp)}>Edit</Button>
-                          <Button variant="ghost" onClick={() => openPwdModal(emp)}>?? Sandi</Button>
-                          <Button variant="ghost" onClick={() => openPwdModal(emp)}>🔑 Sandi</Button>
+                        <Button variant="ghost" onClick={() => openPwdModal(emp)}>🔑 Sandi</Button>
                         {emp.is_active && (
                           <Button variant="danger" onClick={() => void handleDeactivate(emp)}>
                             Nonaktifkan
@@ -289,7 +316,7 @@ export function HREmployeesPage() {
             </table>
           </div>
         )}
-        
+
         {/* Pagination UI */}
         {totalPages > 1 && (
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', padding: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
@@ -407,18 +434,18 @@ export function HREmployeesPage() {
                     <span style={{ fontSize: '0.875rem', opacity: 0.7 }}>Sandi Saat Ini (Teks Asli):</span>
                     <p style={{ fontFamily: 'monospace', fontSize: '1.25rem', marginTop: '0.25rem', color: '#10b981' }}>{rawPwd}</p>
                   </div>
-                  
+
                   <div className={styles.fieldGroup}>
                     <label>Setel Sandi Baru (Opsional)</label>
-                    <input 
-                      type="text" 
-                      className={styles.input} 
+                    <input
+                      type="text"
+                      className={styles.input}
                       placeholder="Ketik password baru (atau kosongkan untuk acak otomatis)"
                       value={newPwdInput}
                       onChange={(e) => setNewPwdInput(e.target.value)}
                     />
                   </div>
-                  
+
                   <Button variant="primary" onClick={handleResetPwd} disabled={resettingPwd}>
                     {resettingPwd ? 'Menyimpan...' : 'Simpan / Reset Sandi'}
                   </Button>

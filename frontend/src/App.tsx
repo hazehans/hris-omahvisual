@@ -126,7 +126,7 @@ function App() {
     <AppShell
       pages={pages}
       activePageId={activePageId}
-      onPageChange={setActivePageId}
+      onPageChange={(pageId: AppPageId) => setActivePageId(pageId)}
       language={language}
       languageLabel={text.language}
       navigationLabel={text.shell.navLabel}

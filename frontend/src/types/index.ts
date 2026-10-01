@@ -118,6 +118,14 @@ export interface HikvisionRawEvent {
   user_type: string;
   raw_payload: Record<string, unknown>;
   fetched_at: string;
+  // Fields added by backend annotate_event()
+  event_label: string;
+  event_category: 'SHOW' | 'DETAIL' | 'HIDE' | 'UNKNOWN';
+}
+
+export interface RawEventListResponse {
+  count: number;
+  results: HikvisionRawEvent[];
 }
 
 export interface DeviceInfo {

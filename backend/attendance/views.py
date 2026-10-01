@@ -190,47 +190,179 @@ class AttendanceAnalyticsView(APIView):
         })
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Hikvision Event Classification Map
+# Format: (major, minor): {'label': str, 'category': 'HIDE'|'SHOW'|'DETAIL'}
+# HIDE   – noise/spam dari perangkat, tidak perlu ditampilkan
+# SHOW   – event kehadiran relevan, selalu tampilkan
+# DETAIL – event sistem/admin, tampilkan dengan detail teknis
+# ─────────────────────────────────────────────────────────────────────────────
+HIKVISION_EVENT_MAP = {
+    # --- HIDE: noise/spam dari perangkat ---
+    (5, 21):   {'label': 'Door Open',                 'category': 'HIDE'},
+    (5, 22):   {'label': 'Door Close',                'category': 'HIDE'},
+    (5, 9):    {'label': 'Face Failed',               'category': 'HIDE'},
+    (5, 39):   {'label': 'Verify Timeout',            'category': 'HIDE'},
+    (5, 38):   {'label': 'Card Verify Wait',          'category': 'HIDE'},
+    (5, 76):   {'label': 'Face/Card Pass',            'category': 'HIDE'},
+
+    # --- SHOW: event kehadiran relevan ---
+    (5, 75):   {'label': 'Biometrics Verify Pass',     'category': 'SHOW'},
+    (5, 1):    {'label': 'Card Verify Pass',          'category': 'SHOW'},
+
+    # --- DETAIL: event sistem / admin ---
+    (3, 80):   {'label': 'Remote Login',              'category': 'DETAIL'},
+    (3, 112):  {'label': 'Remote Config Load',        'category': 'DETAIL'},
+    (3, 121):  {'label': 'Remote Config Save',        'category': 'DETAIL'},
+    (2, 1031): {'label': 'Tamper Detection',          'category': 'DETAIL'},
+    (2, 1024): {'label': 'Network Timeout',           'category': 'DETAIL'},
+    (2, 39):   {'label': 'Network Connected',         'category': 'DETAIL'},
+}
+
+# Set major/minor pair yang masuk kategori HIDE (untuk exclude di queryset)
+HIDE_EVENTS = Q()
+for (maj, min_), meta in HIKVISION_EVENT_MAP.items():
+    if meta['category'] == 'HIDE':
+        HIDE_EVENTS |= Q(major=maj, minor=min_)
+
+
+def annotate_event(event_dict: dict) -> dict:
+    """Tambahkan 'event_label' dan 'event_category' ke dict event."""
+    key = (event_dict.get('major'), event_dict.get('minor'))
+    meta = HIKVISION_EVENT_MAP.get(key, {
+        'label': f"Unknown ({event_dict.get('major')}/{event_dict.get('minor')})",
+        'category': 'UNKNOWN',
+    })
+    event_dict['event_label'] = meta['label']
+    event_dict['event_category'] = meta['category']
+    return event_dict
+
+
 class RawEventListView(APIView):
-    """GET /attendance/raw-events/ — Raw Hikvision event log viewer"""
+    """
+    GET /attendance/raw-events/ — Raw Hikvision event log viewer
+
+    Query params:
+      date             – filter by date (YYYY-MM-DD)
+      employee_no      – filter by employee no (partial)
+      major            – filter by major code
+      minor            – filter by minor code
+      attendance_status– filter by attendance_status field
+      verify_mode      – filter by verify_mode field
+      user_type        – filter by user_type field
+      category         – 'SHOW' | 'DETAIL' | 'UNKNOWN' | 'ALL'
+                         (default: 'ALL' — excludes HIDE events)
+    """
     permission_classes = [IsAuthenticated, IsAdminUser]
-    
+
     def get(self, request):
-        # Exclude specific spam/invalid raw events from the device
-        qs = HikvisionRawEvent.objects.exclude(
-            Q(major=5, minor=21) | Q(major=5, minor=22) | Q(major=5, minor=9)
-        )
-        
-        # Filters
+        # Selalu exclude event HIDE (spam/noise dari perangkat)
+        qs = HikvisionRawEvent.objects.exclude(HIDE_EVENTS)
+
+        # ── Filter: category ──────────────────────────────────────────────────
+        # Jika category=SHOW, hanya tampilkan event yang ada di SHOW list
+        # Jika category=DETAIL, hanya tampilkan event DETAIL list
+        # Jika category=ALL atau tidak diisi, tampilkan semua selain HIDE
+        category_filter = request.query_params.get('category', 'ALL').upper()
+        if category_filter in ('SHOW', 'DETAIL', 'UNKNOWN'):
+            target_pairs = Q()
+            for (maj, min_), meta in HIKVISION_EVENT_MAP.items():
+                if meta['category'] == category_filter:
+                    target_pairs |= Q(major=maj, minor=min_)
+            if category_filter == 'UNKNOWN':
+                # UNKNOWN = tidak ada di event map sama sekali
+                known_pairs = Q()
+                for (maj, min_) in HIKVISION_EVENT_MAP:
+                    known_pairs |= Q(major=maj, minor=min_)
+                qs = qs.exclude(known_pairs)
+            else:
+                qs = qs.filter(target_pairs)
+
+        # ── Filter: tanggal ───────────────────────────────────────────────────
         target_date = request.query_params.get('date')
         if target_date:
             qs = qs.filter(event_time__date=target_date)
+
+        # ── Filter: employee ──────────────────────────────────────────────────
         employee_no = request.query_params.get('employee_no')
         if employee_no:
             qs = qs.filter(employee_no__icontains=employee_no)
-            
+
+        # ── Filter: major / minor ─────────────────────────────────────────────
         major = request.query_params.get('major')
         if major:
             qs = qs.filter(major=major)
-            
+
         minor = request.query_params.get('minor')
         if minor:
             qs = qs.filter(minor=minor)
-            
+
+        # ── Filter: lainnya ───────────────────────────────────────────────────
         attendance_status = request.query_params.get('attendance_status')
         if attendance_status:
             qs = qs.filter(attendance_status=attendance_status)
-            
+
         verify_mode = request.query_params.get('verify_mode')
         if verify_mode:
             qs = qs.filter(verify_mode=verify_mode)
-            
+
         user_type = request.query_params.get('user_type')
         if user_type:
             qs = qs.filter(user_type=user_type)
-        
+
+        # ── Serialize + annotate event label ──────────────────────────────────
         qs = qs.order_by('-event_time')[:200]
         serializer = HikvisionRawEventSerializer(qs, many=True)
-        return Response(serializer.data)
+        data = [annotate_event(row) for row in serializer.data]
+
+        return Response({
+            'count': len(data),
+            'results': data,
+        })
+
+
+class RawEventSummaryView(APIView):
+    """
+    GET /attendance/raw-events/summary/ — Ringkasan jumlah event per kategori
+    Berguna untuk debugging dan monitoring perangkat Hikvision.
+    """
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request):
+        target_date = request.query_params.get('date')
+
+        summary = []
+        for (maj, min_), meta in sorted(HIKVISION_EVENT_MAP.items()):
+            qs = HikvisionRawEvent.objects.filter(major=maj, minor=min_)
+            if target_date:
+                qs = qs.filter(event_time__date=target_date)
+            summary.append({
+                'major': maj,
+                'minor': min_,
+                'label': meta['label'],
+                'category': meta['category'],
+                'count': qs.count(),
+            })
+
+        # Hitung event yang tidak ada di map (UNKNOWN)
+        known_pairs = Q()
+        for (maj, min_) in HIKVISION_EVENT_MAP:
+            known_pairs |= Q(major=maj, minor=min_)
+        unknown_qs = HikvisionRawEvent.objects.exclude(known_pairs)
+        if target_date:
+            unknown_qs = unknown_qs.filter(event_time__date=target_date)
+        summary.append({
+            'major': None,
+            'minor': None,
+            'label': 'Unknown / Tidak Terdaftar',
+            'category': 'UNKNOWN',
+            'count': unknown_qs.count(),
+        })
+
+        return Response({
+            'date': target_date or 'all-time',
+            'events': summary,
+        })
 
 
 class HikvisionDeviceInfoView(APIView):
