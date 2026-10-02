@@ -16,6 +16,7 @@ export interface UserInfo {
   nik: string
   position?: string
   employee_id?: string
+  must_change_password?: boolean
 }
 
 export interface LoginResponse {

@@ -26,6 +26,11 @@ export function LoginPage() {
   // Navigate automatically once authenticated state propagates
   useEffect(() => {
     if (isAuthenticated && user) {
+      // Jika login pakai OTP, wajib ganti password dulu sebelum masuk dashboard
+      if (user.must_change_password) {
+        navigate('/reset-password', { replace: true })
+        return
+      }
       if (user.role === 'SUPERUSER') {
         navigate('/admin/dashboard', { replace: true })
       } else if (user.role === 'HR') {

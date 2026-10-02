@@ -4,6 +4,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { LoginPage } from '@/pages/auth/LoginPage'
+import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
 import { HRLayout } from '@/pages/hr/HRLayout'
 import { HRDashboardPage } from '@/pages/hr/HRDashboardPage'
 import { HRAttendancePage } from '@/pages/hr/HRAttendancePage'
@@ -61,6 +62,7 @@ export function AppRouter() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         {/* Superuser / Admin Routes */}
         <Route
