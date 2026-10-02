@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 
 import { LoginPanel } from '@/components/auth/LoginPanel'
 import { AppShell, type AppPage } from '@/components/layout/AppShell'
-import { isLanguage, UI_TEXT, type Language } from '@/lib/i18n'
+import { UI_TEXT } from '@/lib/i18n'
 import {
   clearSession,
   readSession,
@@ -16,19 +16,10 @@ import { SettingsPage } from '@/pages/SettingsPage'
 
 export type AppPageId = 'dashboard' | 'karyawan' | 'absensi' | 'daily_log' | 'cuti' | 'kontrak' | 'settings'
 
-function getInitialLanguage(): Language {
-  try {
-    const stored = window.localStorage.getItem('liquid-glass-language')
-    return isLanguage(stored) ? stored : 'en'
-  } catch {
-    return 'en'
-  }
-}
+const text = UI_TEXT
 
 function App() {
   const [activePageId, setActivePageId] = useState<AppPageId>('dashboard')
-  const [language, setLanguage] = useState<Language>(getInitialLanguage)
-  const text = UI_TEXT[language]
   const [brand, setBrand] = useState(() => readStoredBrand(text.brand))
   const [session, setSession] = useState<AppSession | null>(() => readSession())
   const [authError, setAuthError] = useState<string | null>(null)
@@ -47,17 +38,8 @@ function App() {
         description: text.pages.settings[1],
       },
     ],
-    [text],
+    [],
   )
-
-  function updateLanguage(next: Language): void {
-    setLanguage(next)
-    try {
-      window.localStorage.setItem('liquid-glass-language', next)
-    } catch {
-      // ignore
-    }
-  }
 
   async function handleLogin(username: string, password: string): Promise<boolean> {
     try {
@@ -113,9 +95,6 @@ function App() {
       <LoginPanel
         text={text.auth}
         brand={brand}
-        language={language}
-        languageLabel={text.language}
-        onLanguageChange={updateLanguage}
         errorMessage={authError}
         onSubmit={handleLogin}
       />
@@ -127,16 +106,13 @@ function App() {
       pages={pages}
       activePageId={activePageId}
       onPageChange={(pageId: AppPageId) => setActivePageId(pageId)}
-      language={language}
-      languageLabel={text.language}
       navigationLabel={text.shell.navLabel}
       brand={brand}
       tagline={text.brandTagline}
       liveBadgeLabel={text.shell.liveBadge}
       menuOpenLabel={text.shell.menuOpen}
       menuCloseLabel={text.shell.menuClose}
-      onLanguageChange={updateLanguage}
-      userLabel={`${text.auth.signedInAs} ${session.username}`}
+      userLabel={session.username}
       logoutLabel={text.auth.signOut}
       onLogout={handleLogout}
     >
@@ -158,10 +134,8 @@ function App() {
       {activePageId === 'settings' ? (
         <SettingsPage
           text={text.settings}
-          language={language}
           brand={brand}
           onBrandChange={setBrand}
-          onLanguageChange={updateLanguage}
         />
       ) : null}
     </AppShell>

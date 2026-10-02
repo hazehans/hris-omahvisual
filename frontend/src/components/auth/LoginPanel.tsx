@@ -1,31 +1,19 @@
 import { useState, type FormEvent } from 'react'
 
-import { GlassSelect } from '@/components/ui/GlassSelect'
-import { LANGUAGE_LABELS, LANGUAGES, type Language, type UiText } from '@/lib/i18n'
+import { type UiText } from '@/lib/i18n'
 
 import styles from './LoginPanel.module.css'
 
 interface LoginPanelProps {
   text: UiText['auth']
   brand: string
-  language: Language
-  languageLabel: string
-  onLanguageChange: (language: Language) => void
   errorMessage: string | null
   onSubmit: (username: string, password: string) => Promise<boolean>
 }
 
-const LANGUAGE_OPTIONS = LANGUAGES.map((option) => ({
-  value: option,
-  label: LANGUAGE_LABELS[option],
-}))
-
 export function LoginPanel({
   text,
   brand,
-  language,
-  languageLabel,
-  onLanguageChange,
   errorMessage,
   onSubmit,
 }: LoginPanelProps) {
@@ -54,18 +42,6 @@ export function LoginPanel({
 
   return (
     <div className={styles.page}>
-      <div className={styles.topBar}>
-        <GlassSelect
-          size="pill"
-          fullWidth={false}
-          aria-label={languageLabel}
-          value={language}
-          options={LANGUAGE_OPTIONS}
-          onChange={(next) => onLanguageChange(next as Language)}
-          className={styles.languageControl}
-        />
-      </div>
-
       <div className={styles.stage}>
         <section className={styles.intro} aria-labelledby="login-title">
           <div className={styles.mark} aria-hidden="true">
@@ -112,7 +88,6 @@ export function LoginPanel({
           </p>
 
           <div className={styles.actions}>
-            <p className={styles.hint}>{text.hintShort}</p>
             <button className={`${styles.next} glass-lens`} type="submit" disabled={submitting}>
               {submitting ? text.signingIn : text.next}
             </button>

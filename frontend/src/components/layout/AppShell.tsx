@@ -1,8 +1,5 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 
-import { GlassSelect } from '@/components/ui/GlassSelect'
-import { LANGUAGE_LABELS, LANGUAGES, type Language } from '@/lib/i18n'
-
 import styles from './AppShell.module.css'
 
 export interface AppPage<T extends string = string> {
@@ -17,15 +14,12 @@ interface AppShellProps<T extends string = string> {
   pages: AppPage<T>[]
   activePageId: T
   onPageChange: (pageId: T) => void
-  language: Language
-  languageLabel: string
   navigationLabel: string
   brand: string
   tagline: string
   liveBadgeLabel?: string
   menuOpenLabel?: string
   menuCloseLabel?: string
-  onLanguageChange: (language: Language) => void
   userLabel?: string | null
   logoutLabel?: string
   onLogout?: () => void
@@ -38,23 +32,12 @@ const DEFAULT_ICONS: Record<string, string> = {
   settings: '⚙',
 }
 
-const LANGUAGE_OPTIONS = LANGUAGES.map((option) => ({
-  value: option,
-  label: LANGUAGE_LABELS[option],
-}))
-
 function AccountControls({
-  language,
-  languageLabel,
-  onLanguageChange,
   userLabel,
   logoutLabel,
   onLogout,
   onAfterAction,
 }: {
-  language: Language
-  languageLabel: string
-  onLanguageChange: (language: Language) => void
   userLabel?: string | null
   logoutLabel?: string
   onLogout?: () => void
@@ -62,35 +45,18 @@ function AccountControls({
 }) {
   return (
     <>
-      <div className={styles.languageControl}>
-        <span className={styles.languageLabel}>{languageLabel}</span>
-        <GlassSelect
-          size="compact"
-          value={language}
-          options={LANGUAGE_OPTIONS}
-          onChange={(next) => {
-            onLanguageChange(next as Language)
-            onAfterAction?.()
-          }}
-          aria-label={languageLabel}
-        />
-      </div>
-
-      {userLabel || onLogout ? (
+      {onLogout && logoutLabel ? (
         <div className={styles.userBlock}>
-          {userLabel ? <p className={styles.userLabel}>{userLabel}</p> : null}
-          {onLogout && logoutLabel ? (
-            <button
-              className={`${styles.logoutButton} glass-lens`}
-              type="button"
-              onClick={() => {
-                onLogout()
-                onAfterAction?.()
-              }}
-            >
-              {logoutLabel}
-            </button>
-          ) : null}
+          <button
+            className={`${styles.logoutButton} glass-lens`}
+            type="button"
+            onClick={() => {
+              onLogout()
+              onAfterAction?.()
+            }}
+          >
+            {logoutLabel}
+          </button>
         </div>
       ) : null}
     </>
@@ -102,22 +68,18 @@ export function AppShell<T extends string = string>({
   pages,
   activePageId,
   onPageChange,
-  language,
-  languageLabel,
   navigationLabel,
   brand,
   tagline,
-  liveBadgeLabel = 'Live workspace',
-  menuOpenLabel = 'Open account menu',
-  menuCloseLabel = 'Close account menu',
-  onLanguageChange,
+  liveBadgeLabel = 'Aktif',
+  menuOpenLabel = 'Buka menu akun',
+  menuCloseLabel = 'Tutup menu akun',
   userLabel,
   logoutLabel,
   onLogout,
   pageIcons,
 }: AppShellProps<T>) {
   const activePage = pages.find((page) => page.id === activePageId) ?? pages[0]
-  const userName = userLabel?.replace(/^.*\s/, '') || brand.slice(0, 1).toUpperCase() || 'A'
   const [menuOpen, setMenuOpen] = useState(false)
   const menuId = useId()
   const menuWrapRef = useRef<HTMLDivElement>(null)
@@ -136,8 +98,6 @@ export function AppShell<T extends string = string>({
     const onPointerDown = (event: PointerEvent): void => {
       const target = event.target as Node | null
       if (!target) return
-      // GlassSelect portals its listbox to document.body, so option clicks
-      // are not descendants of menuWrapRef — still treat them as inside.
       if (menuWrapRef.current?.contains(target)) return
       if (target instanceof Element && target.closest('[data-glass-select-menu]')) return
       setMenuOpen(false)
@@ -158,11 +118,16 @@ export function AppShell<T extends string = string>({
       <aside className={styles.sidebar}>
         <div className={styles.mobileHeader}>
           <div className={styles.profileRow}>
-            <div className={styles.avatar} aria-hidden="true">
-              {userName.slice(0, 1).toUpperCase()}
+            <div className={styles.avatarWrap} aria-hidden="true">
+              <div className={styles.avatar}>
+                <span className={styles.avatarInitial}>
+                  {(userLabel ?? brand).slice(0, 1).toUpperCase()}
+                </span>
+                <span className={styles.avatarComingSoon} title="Foto profil segera hadir">📷</span>
+              </div>
             </div>
             <div className={styles.profileCopy}>
-              <p className={styles.profileName}>{userName}</p>
+              <p className={styles.profileName}>{userLabel ?? brand}</p>
               <p className={styles.profileMeta}>{tagline}</p>
             </div>
           </div>
@@ -186,9 +151,6 @@ export function AppShell<T extends string = string>({
             {menuOpen ? (
               <div id={menuId} className={styles.mobileMenu} role="region" aria-label={menuOpenLabel}>
                 <AccountControls
-                  language={language}
-                  languageLabel={languageLabel}
-                  onLanguageChange={onLanguageChange}
                   userLabel={userLabel}
                   logoutLabel={logoutLabel}
                   onLogout={onLogout}
@@ -227,9 +189,6 @@ export function AppShell<T extends string = string>({
 
         <div className={styles.sidebarFooter}>
           <AccountControls
-            language={language}
-            languageLabel={languageLabel}
-            onLanguageChange={onLanguageChange}
             userLabel={userLabel}
             logoutLabel={logoutLabel}
             onLogout={onLogout}

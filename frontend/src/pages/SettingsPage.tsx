@@ -2,32 +2,22 @@ import { useState, type ChangeEvent, type FormEvent } from 'react'
 
 import { Button } from '@/components/ui/Button'
 import { GlassInput } from '@/components/ui/Field'
-import { GlassSelect } from '@/components/ui/GlassSelect'
 import { GlassPanel } from '@/components/ui/GlassPanel'
-import { LANGUAGE_LABELS, LANGUAGES, type Language, type UiText } from '@/lib/i18n'
+import { type UiText } from '@/lib/i18n'
 import { writeStoredBrand } from '@/lib/storage'
 
 import styles from './SettingsPage.module.css'
 
 interface SettingsPageProps {
   text: UiText['settings']
-  language: Language
   brand: string
   onBrandChange: (brand: string) => void
-  onLanguageChange: (language: Language) => void
 }
-
-const LANGUAGE_OPTIONS = LANGUAGES.map((option) => ({
-  value: option,
-  label: LANGUAGE_LABELS[option],
-}))
 
 export function SettingsPage({
   text,
-  language,
   brand,
   onBrandChange,
-  onLanguageChange,
 }: SettingsPageProps) {
   const [draftBrand, setDraftBrand] = useState(brand)
   const [saved, setSaved] = useState(false)
@@ -60,13 +50,6 @@ export function SettingsPage({
           value={draftBrand}
           placeholder={text.brandPlaceholder}
           onChange={handleBrandChange}
-        />
-
-        <GlassSelect
-          label={text.languageLabel}
-          value={language}
-          options={LANGUAGE_OPTIONS}
-          onChange={(next) => onLanguageChange(next as Language)}
         />
 
         <div className={styles.actions}>
