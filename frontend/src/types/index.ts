@@ -189,8 +189,8 @@ export interface DailyLogCreatePayload {
 
 // ===== LEAVE / CUTI =====
 
-export type LeaveType = 'IZIN' | 'CUTI' | 'SAKIT'
-export type LeaveStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'AUTO_REJECTED'
+export type LeaveType = 'IZIN' | 'CUTI' | 'SAKIT' | 'IZIN_TERLAMBAT'
+export type LeaveStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
 
 export interface LeaveRequest {
   id: string
@@ -199,17 +199,20 @@ export interface LeaveRequest {
   leave_type: LeaveType
   start_date: string
   end_date: string
+  late_until: string | null   // format "HH:MM", khusus IZIN_TERLAMBAT
   reason: string
   attachment: string | null
   signed_attachment: string | null
   status: LeaveStatus
   created_at: string
+  urgency_warning: string | null  // H-0 / H-1 warning dari backend
 }
 
 export interface LeaveCreatePayload {
   leave_type: LeaveType
   start_date: string
   end_date: string
+  late_until?: string   // opsional, khusus IZIN_TERLAMBAT
   reason: string
   attachment?: File
 }

@@ -2,11 +2,12 @@ import os
 import logging
 import requests
 from requests.auth import HTTPDigestAuth
-from datetime import datetime, date
+from datetime import datetime, date, time as time_type
 from django.utils import timezone
 from dateutil.parser import parse as parse_datetime
 from .models import HikvisionRawEvent, AttendanceLog
 from employees.models import Employee
+from leave.models import LeaveRequest
 
 logger = logging.getLogger(__name__)
 
@@ -126,27 +127,58 @@ def save_raw_event(event, device_serial):
     return raw if created else None
 
 
+def has_late_exemption(employee, attendance_date, clock_in_time) -> bool:
+    """
+    Cek apakah karyawan memiliki izin terlambat (IZIN_TERLAMBAT) yang sudah APPROVED
+    untuk tanggal tersebut, dan jam masuk karyawan masih dalam batas late_until.
+    """
+    exemptions = LeaveRequest.objects.filter(
+        employee=employee,
+        leave_type='IZIN_TERLAMBAT',
+        status='APPROVED',
+        start_date__lte=attendance_date,
+        end_date__gte=attendance_date,
+    )
+    for ex in exemptions:
+        # Jika late_until tidak diset, izin berlaku sepanjang hari
+        if ex.late_until is None:
+            return True
+        # Bandingkan jam masuk dengan batas late_until
+        if clock_in_time.time() <= ex.late_until:
+            return True
+    return False
+
+
 def process_attendance(raw_event, event_data):
     """Process a raw event into an attendance record if valid."""
     employee_no = raw_event.employee_no
     attendance_status = raw_event.attendance_status
-    
+
     # Rule: must have employeeNoString
     if not employee_no:
         return None
-    
+
     # Rule: must have valid attendanceStatus
     attendance_type = ATTENDANCE_STATUS_MAP.get(attendance_status)
     if not attendance_type:
         return None
-    
+
     # Rule: must map to an HRIS employee
     try:
         employee = Employee.objects.get(hikvision_id=employee_no, is_active=True)
     except Employee.DoesNotExist:
         logger.warning(f'No HRIS employee found for hikvision_id={employee_no}')
         return None
-    
+
+    # Cek apakah karyawan punya izin terlambat yang approved (hanya relevan untuk IN)
+    is_late_exempt = False
+    if attendance_type == 'IN':
+        is_late_exempt = has_late_exemption(
+            employee=employee,
+            attendance_date=raw_event.event_time.date(),
+            clock_in_time=raw_event.event_time,
+        )
+
     # Create attendance record (OneToOne with raw_event prevents duplicates)
     try:
         att = AttendanceLog.objects.create(
@@ -157,9 +189,11 @@ def process_attendance(raw_event, event_data):
             attendance_type=attendance_type,
             verification_mode=raw_event.verify_mode,
             source='hikvision',
+            is_late_exempt=is_late_exempt,
         )
         return att
     except Exception as e:
-        # IntegrityError if raw_event already linked (duplicate prevention)
         logger.debug(f'Attendance already exists for raw_event {raw_event.id}: {e}')
         return None
+
+

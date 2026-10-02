@@ -29,7 +29,7 @@ class AttendanceLog(models.Model):
         ('IN', 'Clock In'),
         ('OUT', 'Clock Out'),
     ]
-    
+
     employee = models.ForeignKey('employees.Employee', on_delete=models.CASCADE, related_name='attendance_logs')
     raw_event = models.OneToOneField(HikvisionRawEvent, on_delete=models.SET_NULL, null=True, blank=True, related_name='attendance_record')
     attendance_date = models.DateField()
@@ -37,6 +37,8 @@ class AttendanceLog(models.Model):
     attendance_type = models.CharField(max_length=10, choices=ATTENDANCE_TYPE_CHOICES)  # IN or OUT
     verification_mode = models.CharField(max_length=100, blank=True, default='')
     source = models.CharField(max_length=50, default='hikvision')
+    # True jika karyawan memiliki IZIN_TERLAMBAT yang approved sehingga tidak dihitung terlambat
+    is_late_exempt = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -46,3 +48,4 @@ class AttendanceLog(models.Model):
             models.Index(fields=['employee', 'attendance_date']),
             models.Index(fields=['attendance_date']),
         ]
+

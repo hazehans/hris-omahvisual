@@ -5,15 +5,15 @@ from employees.models import Employee
 
 class LeaveRequest(models.Model):
     LEAVE_CHOICES = [
-        ('IZIN', 'Izin'),
-        ('CUTI', 'Cuti'),
+        ('CUTI', 'Cuti Tahunan'),
+        ('IZIN', 'Izin Keperluan'),
         ('SAKIT', 'Sakit'),
+        ('IZIN_TERLAMBAT', 'Izin Terlambat'),
     ]
     STATUS_CHOICES = [
         ('PENDING', 'Menunggu Persetujuan'),
         ('APPROVED', 'Disetujui'),
         ('REJECTED', 'Ditolak'),
-        ('AUTO_REJECTED', 'Ditolak Sistem'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -22,6 +22,8 @@ class LeaveRequest(models.Model):
     
     start_date = models.DateField()
     end_date = models.DateField()
+    # Khusus untuk IZIN_TERLAMBAT: sampai jam berapa izin terlambat berlaku
+    late_until = models.TimeField(null=True, blank=True, help_text='Khusus IZIN_TERLAMBAT: izin terlambat berlaku sampai jam ini')
     reason = models.TextField()
     attachment = models.FileField(upload_to='leave_attachments/', null=True, blank=True)
     signed_attachment = models.FileField(upload_to='leave_attachments/signed/', null=True, blank=True)

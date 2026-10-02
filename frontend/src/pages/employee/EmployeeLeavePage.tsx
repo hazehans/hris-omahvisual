@@ -85,14 +85,15 @@ export function EmployeeLeavePage() {
           <div className={styles.formGrid}>
             <label className={styles.label}>
               Jenis Pengajuan *
-              <select 
-                className={styles.input} 
-                value={form.leave_type} 
+              <select
+                className={styles.input}
+                value={form.leave_type}
                 onChange={e => setForm(f => ({ ...f, leave_type: e.target.value as any }))}
               >
                 <option value="CUTI">Cuti Tahunan</option>
                 <option value="IZIN">Izin Keperluan</option>
                 <option value="SAKIT">Sakit</option>
+                <option value="IZIN_TERLAMBAT">Izin Terlambat</option>
               </select>
             </label>
             <label className={styles.label}>
@@ -115,6 +116,22 @@ export function EmployeeLeavePage() {
                 onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))}
               />
             </label>
+            {/* Kondisional: hanya muncul saat Izin Terlambat */}
+            {form.leave_type === 'IZIN_TERLAMBAT' && (
+              <label className={styles.label} style={{ gridColumn: '1 / -1' }}>
+                Izin Terlambat Sampai Jam *
+                <input
+                  required
+                  type="time"
+                  className={styles.input}
+                  value={(form as any).late_until ?? ''}
+                  onChange={e => setForm(f => ({ ...f, late_until: e.target.value }))}
+                />
+                <span style={{ fontSize: '0.75rem', opacity: 0.6, marginTop: '0.25rem', display: 'block' }}>
+                  Masukkan batas jam terlambat Anda (contoh: 10:00). Kosongkan jika izin berlaku seharian.
+                </span>
+              </label>
+            )}
             <label className={styles.label} style={{ gridColumn: '1 / -1' }}>
               Alasan *
               <textarea 
