@@ -11,12 +11,39 @@ export const attendanceService = {
   autoSync: () => 
     apiRequest<Record<string, unknown>>('/attendance/auto-sync/'),
     
-  exportPdf: (date: string) => {
-    return fetch(`/api/v1/attendance/export-pdf/?date=${date}`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('hris_access_token')}`
+  exportPdf: async (date: string): Promise<Response> => {
+    const { getAccessToken, getRefreshToken, setTokens, API_BASE } = await import('./api');
+
+    const doFetch = (token: string | null) =>
+      fetch(`${API_BASE}/attendance/export-pdf/?date=${date}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      });
+
+    let token = getAccessToken();
+    let response = await doFetch(token);
+
+    // Token expired → try refresh once
+    if (response.status === 401) {
+      const refresh = getRefreshToken();
+      if (refresh) {
+        const refreshRes = await fetch(`${API_BASE}/auth/token/refresh/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh }),
+        });
+        if (refreshRes.ok) {
+          const raw = await refreshRes.json();
+          const newAccess = raw.access ?? raw.data?.access;
+          const newRefresh = raw.refresh ?? raw.data?.refresh ?? refresh;
+          if (newAccess) {
+            setTokens(newAccess, newRefresh);
+            response = await doFetch(newAccess);
+          }
+        }
       }
-    });
+    }
+
+    return response;
   },
   
   history: (params?: { employee_id?: number; start?: string; end?: string; type?: string }) => {
