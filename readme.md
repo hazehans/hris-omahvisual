@@ -80,7 +80,7 @@ Pastikan komputer Anda sudah terinstal:
    ```bash
    npm run dev
    ```
-   *Frontend akan berjalan di `http://localhost:5173`*
+   *Frontend akan berjalan di `http://localhost:5173` atau `http://[IP_ADDRESS]:5173`*
 
 ---
 
