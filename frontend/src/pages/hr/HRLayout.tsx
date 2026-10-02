@@ -8,15 +8,15 @@ import { AppShell, type AppPage } from '@/components/layout/AppShell'
 import { useAuth } from '@/context/AuthContext'
 import { isLanguage, UI_TEXT, type Language } from '@/lib/i18n'
 
-type HRPageId = 'dashboard' | 'attendance' | 'employees' | 'daily-log' | 'leave'
+type HRPageId = 'dashboard' | 'attendance' | 'employees' | 'daily-log' | 'leave' | 'profile'
 
 const HR_PAGES: AppPage<HRPageId>[] = [
   { id: 'dashboard',  label: 'Dashboard',    description: 'Overview & Statistik HRIS',      icon: '◎' },
   { id: 'attendance', label: 'Live Absensi', description: 'Pantau kehadiran hari ini',        icon: '◷' },
-  
   { id: 'employees',  label: 'Karyawan',     description: 'Manajemen data karyawan',          icon: '◈' },
   { id: 'daily-log',  label: 'Daily Log',    description: 'Laporan aktivitas harian',          icon: '◧' },
   { id: 'leave',      label: 'Izin & Cuti',  description: 'Persetujuan pengajuan karyawan',   icon: '◫' },
+  { id: 'profile',    label: 'Profil Saya',  description: 'Data diri & password',             icon: '◉' },
 ]
 
 // Map route path segment → page id
@@ -26,6 +26,7 @@ const PATH_TO_PAGE: Record<string, HRPageId> = {
   employees:  'employees',
   'daily-log': 'daily-log',
   leave:      'leave',
+  profile:    'profile',
 }
 
 function getInitialLanguage(): Language {

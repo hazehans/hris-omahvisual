@@ -17,12 +17,13 @@ import { EmployeeDashboardPage } from '@/pages/employee/EmployeeDashboardPage'
 import { EmployeeAttendancePage } from '@/pages/employee/EmployeeAttendancePage'
 import { EmployeeDailyLogPage } from '@/pages/employee/EmployeeDailyLogPage'
 import { EmployeeLeavePage } from '@/pages/employee/EmployeeLeavePage'
+import { EmployeeProfilePage } from '@/pages/employee/EmployeeProfilePage'
 
 import { SuperuserLayout } from '@/pages/admin/SuperuserLayout'
 import { DeviceManagementPage } from '@/pages/admin/DeviceManagementPage'
 import { AuditLogPage } from '@/pages/admin/AuditLogPage'
-
 import { SuperuserDashboardPage } from '@/pages/admin/SuperuserDashboardPage'
+import { ProfilePage } from '@/components/shared/ProfilePage'
 
 // ─── Guards ─────────────────────────────────────────────────────────────────
 
@@ -82,6 +83,7 @@ export function AppRouter() {
           <Route path="raw-logs" element={<HRRawLogsPage />} />
           <Route path="daily-log" element={<HRDailyLogPage />} />
           <Route path="leave" element={<HRLeavePage />} />
+          <Route path="profile" element={<ProfilePage />} />
         </Route>
 
         {/* HR Routes (Keeping for backward compatibility if needed, otherwise admin takes over) */}
@@ -99,6 +101,7 @@ export function AppRouter() {
           <Route path="employees" element={<HREmployeesPage />} />
           <Route path="daily-log" element={<HRDailyLogPage />} />
           <Route path="leave" element={<HRLeavePage />} />
+          <Route path="profile" element={<ProfilePage />} />
         </Route>
 
         {/* Employee Routes */}
@@ -115,6 +118,7 @@ export function AppRouter() {
           <Route path="attendance" element={<EmployeeAttendancePage />} />
           <Route path="daily-log" element={<EmployeeDailyLogPage />} />
           <Route path="leave" element={<EmployeeLeavePage />} />
+          <Route path="profile" element={<EmployeeProfilePage />} />
         </Route>
 
         {/* Root redirect */}

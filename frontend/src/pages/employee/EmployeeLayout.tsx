@@ -5,13 +5,14 @@ import { AppShell, type AppPage } from '@/components/layout/AppShell'
 import { useAuth } from '@/context/AuthContext'
 import { isLanguage, UI_TEXT, type Language } from '@/lib/i18n'
 
-type EmpPageId = 'dashboard' | 'attendance' | 'daily-log' | 'leave'
+type EmpPageId = 'dashboard' | 'attendance' | 'daily-log' | 'leave' | 'profile'
 
 const EMP_PAGES: AppPage<EmpPageId>[] = [
-  { id: 'dashboard',  label: 'Dashboard',    description: 'Ringkasan & Info',      icon: '◎' },
-  { id: 'attendance', label: 'Absensi Saya', description: 'Riwayat kehadiran',        icon: '◷' },
-  { id: 'daily-log',  label: 'Daily Log',    description: 'Laporan aktivitas',          icon: '◧' },
-  { id: 'leave',      label: 'Izin & Cuti',  description: 'Pengajuan & riwayat',   icon: '◫' },
+  { id: 'dashboard',  label: 'Dashboard',    description: 'Ringkasan & Info',       icon: '◎' },
+  { id: 'attendance', label: 'Absensi Saya', description: 'Riwayat kehadiran',       icon: '◷' },
+  { id: 'daily-log',  label: 'Daily Log',    description: 'Laporan aktivitas',       icon: '◧' },
+  { id: 'leave',      label: 'Izin & Cuti',  description: 'Pengajuan & riwayat',    icon: '◫' },
+  { id: 'profile',    label: 'Profil Saya',  description: 'Data diri & password',   icon: '◉' },
 ]
 
 const PATH_TO_PAGE: Record<string, EmpPageId> = {
@@ -19,6 +20,7 @@ const PATH_TO_PAGE: Record<string, EmpPageId> = {
   attendance: 'attendance',
   'daily-log': 'daily-log',
   leave:      'leave',
+  profile:    'profile',
 }
 
 function getInitialLanguage(): Language {
