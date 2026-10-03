@@ -16,7 +16,7 @@ from audit.utils import log_action
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
 
-def build_user_info(user: User) -> dict:
+def build_user_info(user: User, request=None) -> dict:
     """Build response user info dict (reused by Login & CurrentUser)."""
     if user.is_superuser:
         role = 'SUPERUSER'
@@ -33,7 +33,10 @@ def build_user_info(user: User) -> dict:
         if hasattr(emp, 'photo') and emp.photo:
             # Gunakan MEDIA_URL standard
             from django.conf import settings
-            photo_url = f"{settings.MEDIA_URL}{emp.photo.name}"
+            if request:
+                photo_url = request.build_absolute_uri(emp.photo.url)
+            else:
+                photo_url = f"{settings.MEDIA_URL}{emp.photo.name}"
 
         return {
             'role': role,

@@ -118,31 +118,34 @@ export function EmployeeDailyLogPage() {
                 onChange={handleImageChange}
               />
             </label>
-            {imagePreview && (
-              <div style={{ gridColumn: '1 / -1' }}>
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  style={{
-                    maxWidth: 280, maxHeight: 180, borderRadius: '0.5rem',
-                    objectFit: 'cover', border: '1px solid rgba(255,255,255,0.15)',
-                    cursor: 'pointer',
-                  }}
-                  onClick={() => setLightboxUrl(imagePreview)}
-                />
-                <button
-                  type="button"
-                  onClick={() => { setImageFile(null); setImagePreview(null) }}
-                  style={{
-                    display: 'block', marginTop: '0.35rem',
-                    background: 'none', border: 'none', color: '#ff6961',
-                    fontSize: '0.75rem', cursor: 'pointer', padding: 0,
-                  }}
-                >
-                  ✕ Hapus foto
-                </button>
-              </div>
-            )}
+            {imagePreviews.length > 0 && (
+                <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {imagePreviews.map((preview, i) => (
+                    <img
+                      key={i}
+                      src={preview}
+                      alt={`Preview ${i+1}`}
+                      style={{
+                        width: 100, height: 100, borderRadius: '0.5rem',
+                        objectFit: 'cover', border: '1px solid rgba(255,255,255,0.15)',
+                        cursor: 'pointer',
+                      }}
+                      onClick={() => setLightboxUrl(preview)}
+                    />
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => { setImageFiles([]); setImagePreviews([]) }}
+                    style={{
+                      display: 'block', width: '100%', marginTop: '0.35rem', textAlign: 'left',
+                      background: 'none', border: 'none', color: '#ff6961',
+                      fontSize: '0.75rem', cursor: 'pointer', padding: 0,
+                    }}
+                  >
+                    ✕ Hapus Semua Foto
+                  </button>
+                </div>
+              )}
           </div>
 
           {formError   && <p className={styles.errorMsg}>⚠️ {formError}</p>}
