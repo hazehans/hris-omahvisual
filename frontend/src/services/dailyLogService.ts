@@ -20,13 +20,14 @@ export const dailyLogService = {
    * Employee only. Supports image upload via FormData.
    */
   async create(payload: DailyLogCreatePayload): Promise<DailyLog> {
-    // Jika ada image, gunakan FormData; jika tidak, kirim JSON biasa
-    if (payload.image) {
+    if (payload.images && payload.images.length > 0) {
       const formData = new FormData()
       formData.append('activity', payload.activity)
       if (payload.work_link) formData.append('work_link', payload.work_link)
       if (payload.issue) formData.append('issue', payload.issue)
-      formData.append('image', payload.image)
+      payload.images.forEach(img => {
+        formData.append('images', img)
+      })
 
       const token = getAccessToken()
       const res = await fetch(`${BASE_URL}/daily-logs/`, {

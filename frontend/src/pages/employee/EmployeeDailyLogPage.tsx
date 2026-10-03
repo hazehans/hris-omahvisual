@@ -12,13 +12,13 @@ export function EmployeeDailyLogPage() {
   const [error, setError] = useState<string | null>(null)
 
   // Form State
-  const [form, setForm] = useState<Omit<DailyLogCreatePayload, 'image'>>({
+  const [form, setForm] = useState<Omit<DailyLogCreatePayload, 'images'>>({
     activity: '',
     work_link: '',
     issue: '',
   })
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [imageFiles, setImageFiles] = useState<File[]>([])
+  const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [formSuccess, setFormSuccess] = useState<string | null>(null)
@@ -41,13 +41,9 @@ export function EmployeeDailyLogPage() {
   useEffect(() => { void fetchLogs() }, [fetchLogs])
 
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0] ?? null
-    setImageFile(file)
-    if (file) {
-      setImagePreview(URL.createObjectURL(file))
-    } else {
-      setImagePreview(null)
-    }
+    const files = Array.from(e.target.files ?? [])
+    setImageFiles(files)
+    setImagePreviews(files.map(f => URL.createObjectURL(f)))
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -56,10 +52,10 @@ export function EmployeeDailyLogPage() {
     setFormError(null)
     setFormSuccess(null)
     try {
-      await dailyLogService.create({ ...form, image: imageFile ?? undefined })
+      await dailyLogService.create({ ...form, images: imageFiles.length > 0 ? imageFiles : undefined })
       setForm({ activity: '', work_link: '', issue: '' })
-      setImageFile(null)
-      setImagePreview(null)
+      setImageFiles([])
+      setImagePreviews([])
       setFormSuccess('Daily log berhasil dikirim!')
       void fetchLogs()
     } catch (err: unknown) {
@@ -191,12 +187,28 @@ export function EmployeeDailyLogPage() {
                         {!log.issue && !log.work_link && <span style={{ opacity: 0.3 }}>—</span>}
                       </td>
                       <td>
-                        {log.image_url ? (
+                        {log.images && log.images.length > 0 ? (
+                          <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
+                            {log.images.map((img: any) => (
+                               <img
+                                 key={img.id}
+                                 src={img.image_url}
+                                 alt="Dokumentasi"
+                                 style={{
+                                   width: 48, height: 48, borderRadius: '0.4rem',
+                                   objectFit: 'cover', cursor: 'pointer',
+                                   border: '1px solid rgba(255,255,255,0.15)',
+                                 }}
+                                 onClick={() => setLightboxUrl(img.image_url)}
+                               />
+                            ))}
+                          </div>
+                        ) : log.image_url ? (
                           <img
                             src={log.image_url}
-                            alt="Dokumentasi"
+                            alt="Dokumentasi (Lama)"
                             style={{
-                              width: 56, height: 56, borderRadius: '0.4rem',
+                              width: 48, height: 48, borderRadius: '0.4rem',
                               objectFit: 'cover', cursor: 'pointer',
                               border: '1px solid rgba(255,255,255,0.15)',
                             }}

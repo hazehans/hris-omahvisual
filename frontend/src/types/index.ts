@@ -182,7 +182,8 @@ export interface DailyLog {
   activity: string
   work_link: string | null
   issue: string | null
-  image_url: string | null   // URL foto dokumentasi dari server
+  image_url?: string | null
+  images?: { id: number; image_url: string }[]
   created_at: string
 }
 
@@ -190,7 +191,7 @@ export interface DailyLogCreatePayload {
   activity: string
   work_link?: string
   issue?: string
-  image?: File        // file upload opsional
+  images?: File[]
 }
 
 // ===== LEAVE / CUTI =====

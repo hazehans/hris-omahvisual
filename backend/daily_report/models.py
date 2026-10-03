@@ -21,3 +21,9 @@ class DailyLog(models.Model):
     class Meta:
         db_table = 'daily_report_log'
         ordering = ['-created_at']
+
+
+class DailyLogImage(models.Model):
+    daily_log = models.ForeignKey(DailyLog, on_delete=models.CASCADE, related_name='images')
+    image = models.ImageField(upload_to='daily_log_images/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)

@@ -41,6 +41,11 @@ class DailyLogListCreateAPIView(generics.ListCreateAPIView):
             raise PermissionDenied("Superadmin tidak perlu mengisi Daily Log Karyawan.")
         try:
             employee = user.employee_profile
-            serializer.save(employee=employee)
-        except Exception:
-            raise PermissionDenied("Profil karyawan tidak ditemukan.")
+            daily_log = serializer.save(employee=employee)
+            # Handle multiple images
+            images = self.request.FILES.getlist('images')
+            from .models import DailyLogImage
+            for img in images:
+                DailyLogImage.objects.create(daily_log=daily_log, image=img)
+        except Exception as e:
+            raise PermissionDenied(f"Terjadi kesalahan: {str(e)}")

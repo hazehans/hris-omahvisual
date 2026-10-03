@@ -1,23 +1,22 @@
 from rest_framework import serializers
-from .models import DailyLog
+from .models import DailyLog, DailyLogImage
 
+class DailyLogImageSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+    class Meta:
+        model = DailyLogImage
+        fields = ['id', 'image_url']
+    def get_image_url(self, obj):
+        request = self.context.get('request')
+        if request and obj.image:
+            return request.build_absolute_uri(obj.image.url)
+        return obj.image.url if obj.image else None
 
 class DailyLogSerializer(serializers.ModelSerializer):
     employee_name = serializers.CharField(source='employee.full_name', read_only=True)
     employee_role = serializers.CharField(source='employee.role', read_only=True)
-    image_url = serializers.SerializerMethodField()
+    images = DailyLogImageSerializer(many=True, read_only=True)
 
     class Meta:
         model = DailyLog
-        fields = ['id', 'employee_name', 'employee_role', 'date', 'activity', 'work_link', 'issue', 'image', 'image_url', 'created_at']
-        extra_kwargs = {
-            'image': {'write_only': True, 'required': False},
-        }
-
-    def get_image_url(self, obj) -> str | None:
-        if obj.image:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.image.url)
-            return obj.image.url
-        return None
+        fields = ['id', 'employee_name', 'employee_role', 'date', 'activity', 'work_link', 'issue', 'images', 'created_at']
