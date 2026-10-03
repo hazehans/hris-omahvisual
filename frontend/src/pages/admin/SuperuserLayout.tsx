@@ -1,8 +1,7 @@
-import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { AppShell, type AppPage } from '@/components/layout/AppShell';
 import { useAuth } from '@/context/AuthContext';
-import { isLanguage, UI_TEXT, type Language } from '@/lib/i18n';
+import { UI_TEXT } from '@/lib/i18n';
 
 type AdminPageId = 'dashboard' | 'device' | 'audit' | 'employees' | 'attendance' | 'raw-logs' | 'daily-log' | 'leave' | 'profile';
 
@@ -30,37 +29,16 @@ const PATH_TO_PAGE: Record<string, AdminPageId> = {
   profile:    'profile',
 };
 
-function getInitialLanguage(): Language {
-  try {
-    const stored = window.localStorage.getItem('hris-language');
-    return isLanguage(stored) ? stored : 'en';
-  } catch {
-    return 'en';
-  }
-}
-
 export function SuperuserLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [language, setLanguage] = useState<Language>(getInitialLanguage);
-
-  const text = UI_TEXT[language];
 
   const pathSegment = location.pathname.split('/').pop() ?? 'dashboard';
   const activePageId: AdminPageId = PATH_TO_PAGE[pathSegment] ?? 'dashboard';
 
   function handlePageChange(pageId: AdminPageId) {
     navigate(`/admin/${pageId}`);
-  }
-
-  function handleLanguageChange(next: Language) {
-    setLanguage(next);
-    try {
-      window.localStorage.setItem('hris-language', next);
-    } catch {
-      // ignore
-    }
   }
 
   async function handleLogout() {
@@ -73,17 +51,14 @@ export function SuperuserLayout() {
       pages={ADMIN_PAGES}
       activePageId={activePageId}
       onPageChange={handlePageChange}
-      language={language}
-      languageLabel={text.language}
       navigationLabel="Menu Superuser"
       brand="OmahVisual"
       tagline="Superuser Console"
       liveBadgeLabel="System Admin"
-      menuOpenLabel="Buka menu akun"
-      menuCloseLabel="Tutup menu akun"
-      onLanguageChange={handleLanguageChange}
-      userLabel={user ? `${user.name} (Superuser)` : undefined}
-      logoutLabel="Keluar"
+      menuOpenLabel={UI_TEXT.shell.menuOpen}
+      menuCloseLabel={UI_TEXT.shell.menuClose}
+      userLabel={user ? user.name : undefined}
+      logoutLabel={UI_TEXT.auth.signOut}
       onLogout={() => void handleLogout()}
     >
       <Outlet />
