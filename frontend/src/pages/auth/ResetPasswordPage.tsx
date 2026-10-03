@@ -41,7 +41,7 @@ export function ResetPasswordPage() {
         body: {
           new_password: form.new_password,
           confirm_password: form.confirm_password,
-        },
+        } as Record<string, unknown>,
       })
       setSuccess(true)
       // Logout otomatis setelah 2.5 detik, paksa login ulang pakai password baru

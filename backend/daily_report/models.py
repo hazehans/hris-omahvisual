@@ -8,6 +8,11 @@ class DailyLog(models.Model):
     activity = models.TextField(verbose_name="Aktivitas Pekerjaan")
     work_link = models.URLField(max_length=500, null=True, blank=True, verbose_name="Link Kerja")
     issue = models.TextField(null=True, blank=True, verbose_name="Kendala")
+    image = models.ImageField(
+        upload_to='daily_log_images/',
+        null=True, blank=True,
+        verbose_name="Foto / Dokumentasi"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

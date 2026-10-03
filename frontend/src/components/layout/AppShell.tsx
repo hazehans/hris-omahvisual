@@ -33,12 +33,10 @@ const DEFAULT_ICONS: Record<string, string> = {
 }
 
 function AccountControls({
-  userLabel,
   logoutLabel,
   onLogout,
   onAfterAction,
 }: {
-  userLabel?: string | null
   logoutLabel?: string
   onLogout?: () => void
   onAfterAction?: () => void
@@ -151,7 +149,6 @@ export function AppShell<T extends string = string>({
             {menuOpen ? (
               <div id={menuId} className={styles.mobileMenu} role="region" aria-label={menuOpenLabel}>
                 <AccountControls
-                  userLabel={userLabel}
                   logoutLabel={logoutLabel}
                   onLogout={onLogout}
                   onAfterAction={() => setMenuOpen(false)}
@@ -189,7 +186,6 @@ export function AppShell<T extends string = string>({
 
         <div className={styles.sidebarFooter}>
           <AccountControls
-            userLabel={userLabel}
             logoutLabel={logoutLabel}
             onLogout={onLogout}
           />

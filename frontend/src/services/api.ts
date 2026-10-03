@@ -117,6 +117,11 @@ export async function apiRequest<T>(
     }
   }
 
+  // Handle 204 No Content
+  if (response.status === 204) {
+    return null as unknown as T
+  }
+
   // Parse response body
   let json: Record<string, unknown>
   try {
@@ -127,8 +132,8 @@ export async function apiRequest<T>(
 
   // Handle API error envelope
   if (!response.ok) {
-    const err = json as { status?: string; code?: string; message?: string; errors?: unknown }
-    const message = err.message ?? `HTTP ${response.status}`
+    const err = json as { status?: string; code?: string; message?: string; error?: string; errors?: unknown }
+    const message = err.message ?? err.error ?? `HTTP ${response.status}`
     const error = new Error(message) as Error & { code?: string; errors?: unknown; status?: number }
     error.code = err.code
     error.errors = err.errors

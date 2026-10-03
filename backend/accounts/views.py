@@ -27,6 +27,14 @@ def build_user_info(user: User) -> dict:
 
     try:
         emp = user.employee_profile
+        
+        # Build photo_url jika ada
+        photo_url = None
+        if hasattr(emp, 'photo') and emp.photo:
+            # Gunakan MEDIA_URL standard
+            from django.conf import settings
+            photo_url = f"{settings.MEDIA_URL}{emp.photo.name}"
+
         return {
             'role': role,
             'name': emp.full_name,
@@ -34,6 +42,8 @@ def build_user_info(user: User) -> dict:
             'position': getattr(emp, 'role', ''),
             'employee_id': str(emp.id),
             'must_change_password': user.must_change_password,
+            'photo_url': photo_url,
+            'nickname': getattr(emp, 'nickname', ''),
         }
     except Exception:
         return {

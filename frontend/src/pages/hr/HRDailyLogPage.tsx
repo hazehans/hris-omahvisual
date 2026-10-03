@@ -163,6 +163,7 @@ export function HRDailyLogPage() {
                           <th>Aktivitas</th>
                           <th style={{ width: '120px' }}>Link Kerja</th>
                           <th style={{ width: '150px' }}>Kendala</th>
+                          <th style={{ width: '72px' }}>Foto</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -186,6 +187,20 @@ export function HRDailyLogPage() {
                               <td>
                                 {log.issue
                                   ? <span style={{ color: '#f87171', fontSize: '0.75rem' }}>{log.issue}</span>
+                                  : <span style={{ opacity: 0.3 }}>—</span>}
+                              </td>
+                              <td>
+                                {log.image_url
+                                  ? <img
+                                      src={log.image_url}
+                                      alt="Dokumentasi"
+                                      style={{
+                                        width: 52, height: 52, borderRadius: '0.35rem',
+                                        objectFit: 'cover', cursor: 'pointer',
+                                        border: '1px solid rgba(255,255,255,0.15)',
+                                      }}
+                                      onClick={() => window.open(log.image_url!, '_blank')}
+                                    />
                                   : <span style={{ opacity: 0.3 }}>—</span>}
                               </td>
                             </tr>

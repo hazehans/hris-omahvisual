@@ -36,6 +36,11 @@ class Employee(models.Model):
     bank_account_info = models.CharField(max_length=255, null=True, blank=True, verbose_name="Info Rekening Bank")
     
     is_active = models.BooleanField(default=True, verbose_name="Karyawan Aktif")
+    photo = models.ImageField(
+        upload_to='employee_photos/',
+        null=True, blank=True,
+        verbose_name="Foto Karyawan"
+    )
 
     def __str__(self):
         return f"{self.nik} - {self.full_name}"

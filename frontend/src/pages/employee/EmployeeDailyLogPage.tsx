@@ -10,15 +10,21 @@ export function EmployeeDailyLogPage() {
   const [logs, setLogs] = useState<DailyLog[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  
+
   // Form State
-  const [form, setForm] = useState<DailyLogCreatePayload>({
+  const [form, setForm] = useState<Omit<DailyLogCreatePayload, 'image'>>({
     activity: '',
     work_link: '',
-    issue: ''
+    issue: '',
   })
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [formSuccess, setFormSuccess] = useState<string | null>(null)
+
+  // Preview lightbox
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
 
   const fetchLogs = useCallback(async () => {
     setLoading(true)
@@ -34,18 +40,28 @@ export function EmployeeDailyLogPage() {
 
   useEffect(() => { void fetchLogs() }, [fetchLogs])
 
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null
+    setImageFile(file)
+    if (file) {
+      setImagePreview(URL.createObjectURL(file))
+    } else {
+      setImagePreview(null)
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSubmitting(true)
     setFormError(null)
+    setFormSuccess(null)
     try {
-      await dailyLogService.create(form)
-      setForm({
-        activity: '',
-        work_link: '',
-        issue: ''
-      })
-      void fetchLogs() // Refresh logs
+      await dailyLogService.create({ ...form, image: imageFile ?? undefined })
+      setForm({ activity: '', work_link: '', issue: '' })
+      setImageFile(null)
+      setImagePreview(null)
+      setFormSuccess('Daily log berhasil dikirim!')
+      void fetchLogs()
     } catch (err: unknown) {
       const e = err as { message?: string; errors?: Record<string, string[]> }
       if (e.errors) {
@@ -66,38 +82,76 @@ export function EmployeeDailyLogPage() {
           <div className={styles.formGrid}>
             <label className={styles.label} style={{ gridColumn: '1 / -1' }}>
               Aktivitas / Deskripsi Pekerjaan *
-              <textarea 
-                required 
-                className={styles.input} 
+              <textarea
+                required
+                className={styles.input}
                 rows={4}
-                value={form.activity} 
+                value={form.activity}
                 onChange={e => setForm(f => ({ ...f, activity: e.target.value }))}
                 placeholder="Contoh: Menyelesaikan desain banner promo bulan ini..."
               />
             </label>
             <label className={styles.label}>
               Link Hasil Kerja (Opsional)
-              <input 
+              <input
                 type="url"
-                className={styles.input} 
-                value={form.work_link ?? ''} 
+                className={styles.input}
+                value={form.work_link ?? ''}
                 onChange={e => setForm(f => ({ ...f, work_link: e.target.value }))}
                 placeholder="Link GDrive, Trello, dsb."
               />
             </label>
             <label className={styles.label}>
               Kendala (Opsional)
-              <input 
-                className={styles.input} 
-                value={form.issue ?? ''} 
+              <input
+                className={styles.input}
+                value={form.issue ?? ''}
                 onChange={e => setForm(f => ({ ...f, issue: e.target.value }))}
                 placeholder="Tulis kendala jika ada"
               />
             </label>
+
+            {/* ── Image Upload ─────────────────────────────────────── */}
+            <label className={styles.label} style={{ gridColumn: '1 / -1' }}>
+              Foto / Dokumentasi Pekerjaan (Opsional)
+              <input
+                type="file"
+                accept="image/*"
+                className={styles.input}
+                style={{ paddingTop: '0.5rem' }}
+                onChange={handleImageChange}
+              />
+            </label>
+            {imagePreview && (
+              <div style={{ gridColumn: '1 / -1' }}>
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  style={{
+                    maxWidth: 280, maxHeight: 180, borderRadius: '0.5rem',
+                    objectFit: 'cover', border: '1px solid rgba(255,255,255,0.15)',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => setLightboxUrl(imagePreview)}
+                />
+                <button
+                  type="button"
+                  onClick={() => { setImageFile(null); setImagePreview(null) }}
+                  style={{
+                    display: 'block', marginTop: '0.35rem',
+                    background: 'none', border: 'none', color: '#ff6961',
+                    fontSize: '0.75rem', cursor: 'pointer', padding: 0,
+                  }}
+                >
+                  ✕ Hapus foto
+                </button>
+              </div>
+            )}
           </div>
 
-          {formError && <p className={styles.errorMsg}>{formError}</p>}
-          
+          {formError   && <p className={styles.errorMsg}>⚠️ {formError}</p>}
+          {formSuccess && <p style={{ color: '#30d158', fontSize: '0.85rem', margin: '0.5rem 0' }}>✅ {formSuccess}</p>}
+
           <div className={styles.formActions} style={{ marginTop: '1.5rem', justifyContent: 'flex-start' }}>
             <Button variant="primary" type="submit" disabled={submitting}>
               {submitting ? 'Mengirim…' : 'Kirim Daily Log'}
@@ -123,6 +177,7 @@ export function EmployeeDailyLogPage() {
                     <th>Tanggal</th>
                     <th>Aktivitas</th>
                     <th>Kendala / Link</th>
+                    <th>Foto</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -135,6 +190,22 @@ export function EmployeeDailyLogPage() {
                         {log.work_link && <div><a href={log.work_link} target="_blank" rel="noopener noreferrer" style={{ color: '#64d2ff' }}>Lihat Hasil ↗</a></div>}
                         {!log.issue && !log.work_link && <span style={{ opacity: 0.3 }}>—</span>}
                       </td>
+                      <td>
+                        {log.image_url ? (
+                          <img
+                            src={log.image_url}
+                            alt="Dokumentasi"
+                            style={{
+                              width: 56, height: 56, borderRadius: '0.4rem',
+                              objectFit: 'cover', cursor: 'pointer',
+                              border: '1px solid rgba(255,255,255,0.15)',
+                            }}
+                            onClick={() => setLightboxUrl(log.image_url!)}
+                          />
+                        ) : (
+                          <span style={{ opacity: 0.3 }}>—</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -143,6 +214,24 @@ export function EmployeeDailyLogPage() {
           )}
         </GlassPanel>
       </div>
+
+      {/* ── Lightbox ─────────────────────────────────────────────── */}
+      {lightboxUrl && (
+        <div
+          onClick={() => setLightboxUrl(null)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 9999, cursor: 'zoom-out',
+          }}
+        >
+          <img
+            src={lightboxUrl}
+            alt="Foto dokumentasi"
+            style={{ maxWidth: '90vw', maxHeight: '90vh', borderRadius: '0.75rem', objectFit: 'contain' }}
+          />
+        </div>
+      )}
     </div>
   )
 }

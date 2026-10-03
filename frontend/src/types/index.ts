@@ -17,6 +17,8 @@ export interface UserInfo {
   position?: string
   employee_id?: string
   must_change_password?: boolean
+  photo_url?: string | null
+  nickname?: string | null
 }
 
 export interface LoginResponse {
@@ -64,6 +66,7 @@ export interface Employee {
   contract_end_date: string | null
   bank_account_info: string | null
   is_active: boolean
+  photo_url?: string | null   // URL foto dari server (via EmployeeSerializer.get_photo_url)
 }
 
 // ===== ATTENDANCE =====
@@ -179,6 +182,7 @@ export interface DailyLog {
   activity: string
   work_link: string | null
   issue: string | null
+  image_url: string | null   // URL foto dokumentasi dari server
   created_at: string
 }
 
@@ -186,6 +190,7 @@ export interface DailyLogCreatePayload {
   activity: string
   work_link?: string
   issue?: string
+  image?: File        // file upload opsional
 }
 
 // ===== LEAVE / CUTI =====

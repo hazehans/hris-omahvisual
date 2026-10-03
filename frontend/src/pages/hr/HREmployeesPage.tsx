@@ -32,7 +32,7 @@ function useLockBodyScroll(active: boolean) {
 }
 
 export function HREmployeesPage() {
-  const { user } = useAuth()
+  const { user, isSuperuser } = useAuth()
 
   // ── data ─────────────────────────────────────────────────────────────────
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -65,9 +65,9 @@ export function HREmployeesPage() {
     message?: string; username: string; password: string; error?: string
   } | null>(null)
 
-  // ── confirm (deactivate/activate) sub-modal ──────────────────────────────
+  // ── confirm (deactivate/activate/delete) sub-modal ───────────────────────
   const [confirmOpen,   setConfirmOpen]   = useState(false)
-  const [confirmAction, setConfirmAction] = useState<'deactivate' | 'activate'>('deactivate')
+  const [confirmAction, setConfirmAction] = useState<'deactivate' | 'activate' | 'delete'>('deactivate')
   const [confirmLoading,setConfirmLoading]= useState(false)
   const [confirmError,  setConfirmError]  = useState<string | null>(null)
 
@@ -186,7 +186,7 @@ export function HREmployeesPage() {
     if (user?.role === 'SUPERUSER') {
       try {
         const list = await employeeService.listPasswords()
-        const found = list.find(l => l.employee_id === editTarget.id)
+        const found = list.find(l => l.employee_id === Number(editTarget.id))
         setRawPwd(found?.raw_password || 'Belum diatur')
       } catch {
         setRawPwd('Error')
@@ -212,8 +212,8 @@ export function HREmployeesPage() {
     }
   }
 
-  // ── activate / deactivate ─────────────────────────────────────────────────
-  function openConfirmToggle(action: 'deactivate' | 'activate') {
+  // ── activate / deactivate / delete ───────────────────────────────────────
+  function openConfirmToggle(action: 'deactivate' | 'activate' | 'delete') {
     setConfirmAction(action)
     setConfirmError(null)
     setConfirmOpen(true)
@@ -225,16 +225,28 @@ export function HREmployeesPage() {
     setConfirmError(null)
     try {
       if (confirmAction === 'deactivate') {
-        await employeeService.deactivate(editTarget.id)
+        // HR + Superadmin: soft deactivate via DELETE (backend role-aware)
+        await employeeService.delete(Number(editTarget.id))
         const updated = { ...editTarget, is_active: false }
         setEditTarget(updated)
         setForm(f => ({ ...f, is_active: false }))
         setEmployees(prev => prev.map(emp => emp.id === editTarget.id ? updated : emp))
-      } else {
-        const updated = await employeeService.update(editTarget.id, { is_active: true })
+      } else if (confirmAction === 'activate') {
+        // Superadmin only: reaktivasi via toggle-active endpoint
+        await employeeService.toggleActive(Number(editTarget.id), true)
+        const updated = { ...editTarget, is_active: true }
         setEditTarget(updated)
         setForm(f => ({ ...f, is_active: true }))
         setEmployees(prev => prev.map(emp => emp.id === editTarget.id ? updated : emp))
+      } else if (confirmAction === 'delete') {
+        // Superadmin only: hard delete — hapus dari DB + Hikvision
+        await employeeService.delete(Number(editTarget.id))
+        // Tutup semua modal dan hapus dari list
+        setConfirmOpen(false)
+        setEditOpen(false)
+        setEditTarget(null)
+        setEmployees(prev => prev.filter(emp => emp.id !== editTarget.id))
+        return
       }
       setConfirmOpen(false)
     } catch (err: unknown) {
@@ -560,25 +572,49 @@ export function HREmployeesPage() {
               {/* ── Secondary actions (edit only) ──────────────────── */}
               {editTarget && (
                 <div className={styles.secondaryActions}>
-                  <button type="button" className={styles.actionLink} onClick={() => void openPwdModal()}>
-                    🔑 Ganti Password
-                  </button>
+                  {user?.role === 'SUPERUSER' && (
+                    <button type="button" className={styles.actionLink} onClick={() => void openPwdModal()}>
+                      🔑 Ganti Password
+                    </button>
+                  )}
                   {editTarget.is_active ? (
-                    <button
-                      type="button"
-                      className={`${styles.actionLink} ${styles.actionLinkDanger}`}
-                      onClick={() => openConfirmToggle('deactivate')}
-                    >
-                      ⚠ Nonaktifkan Karyawan
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        className={`${styles.actionLink} ${styles.actionLinkDanger}`}
+                        onClick={() => openConfirmToggle('deactivate')}
+                      >
+                        ⚠ Nonaktifkan
+                      </button>
+                      {isSuperuser && (
+                        <button
+                          type="button"
+                          className={`${styles.actionLink} ${styles.actionLinkDanger}`}
+                          onClick={() => openConfirmToggle('delete')}
+                        >
+                          🗑 Hapus Permanen
+                        </button>
+                      )}
+                    </>
                   ) : (
-                    <button
-                      type="button"
-                      className={`${styles.actionLink} ${styles.actionLinkSuccess}`}
-                      onClick={() => openConfirmToggle('activate')}
-                    >
-                      ✓ Aktifkan Karyawan
-                    </button>
+                    <>
+                      <button
+                          type="button"
+                          className={`${styles.actionLink} ${styles.actionLinkSuccess}`}
+                          onClick={() => openConfirmToggle('activate')}
+                        >
+                          ✓ Aktifkan
+                        </button>
+                        {isSuperuser && (
+                          <button
+                            type="button"
+                            className={`${styles.actionLink} ${styles.actionLinkDanger}`}
+                            onClick={() => openConfirmToggle('delete')}
+                          >
+                            🗑 Hapus Permanen
+                          </button>
+                        )}
+                    </>
                   )}
                 </div>
               )}
@@ -673,7 +709,7 @@ export function HREmployeesPage() {
           <div className={styles.subModal} role="alertdialog" aria-modal="true" aria-labelledby="confirm-title">
             <div className={styles.modalHeader}>
               <h2 id="confirm-title" className={styles.modalTitle}>
-                {confirmAction === 'deactivate' ? 'Nonaktifkan Karyawan' : 'Aktifkan Karyawan'}
+                {confirmAction === 'deactivate' ? 'Nonaktifkan Karyawan' : confirmAction === 'delete' ? 'Hapus Karyawan' : 'Aktifkan Karyawan'}
               </h2>
               <button type="button" className={styles.closeBtn} onClick={() => setConfirmOpen(false)} aria-label="Tutup">✕</button>
             </div>
@@ -686,6 +722,15 @@ export function HREmployeesPage() {
                   </p>
                   <p className={styles.confirmDesc}>
                     Karyawan akan menjadi nonaktif di sistem HRIS. Data tidak dihapus dan dapat diaktifkan kembali kapan saja.
+                  </p>
+                </>
+              ) : confirmAction === 'delete' ? (
+                <>
+                  <p className={styles.confirmText}>
+                    Hapus permanen <strong>{editTarget.full_name}</strong>?
+                  </p>
+                  <p className={styles.confirmDesc}>
+                    Karyawan akan dihapus dari sistem HRIS dan mesin absensi (Hikvision) secara permanen. Tindakan ini tidak dapat dibatalkan.
                   </p>
                 </>
               ) : (
@@ -704,13 +749,13 @@ export function HREmployeesPage() {
             <div className={styles.formActions}>
               <Button variant="ghost" onClick={() => setConfirmOpen(false)} disabled={confirmLoading}>Batal</Button>
               <Button
-                variant={confirmAction === 'deactivate' ? 'danger' : 'primary'}
+                variant={confirmAction === 'deactivate' || confirmAction === 'delete' ? 'danger' : 'primary'}
                 onClick={() => void handleToggleStatus()}
                 disabled={confirmLoading}
               >
                 {confirmLoading
                   ? 'Memproses…'
-                  : confirmAction === 'deactivate' ? 'Nonaktifkan' : 'Aktifkan'}
+                  : confirmAction === 'deactivate' ? 'Nonaktifkan' : confirmAction === 'delete' ? 'Hapus Permanen' : 'Aktifkan'}
               </Button>
             </div>
           </div>

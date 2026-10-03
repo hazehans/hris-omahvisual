@@ -24,7 +24,7 @@ export function SuperuserDashboardPage() {
   const [data, setData] = useState<SuperuserDashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [chartFilter, setChartFilter] = useState<'7' | '30'>('30')
-  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'error'>('idle')
+  const [syncStatus] = useState<'idle' | 'syncing' | 'error'>('idle')
 
   const fetchDashboardData = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true)

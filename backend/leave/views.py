@@ -1,9 +1,21 @@
+"""
+leave/views.py — Leave Request Management
+
+HR bisa:
+  - Melihat semua pengajuan
+  - Approve / Reject
+  - Update late_until untuk IZIN_TERLAMBAT
+
+Karyawan bisa:
+  - Mengajukan izin/cuti
+  - Melihat pengajuan sendiri
+"""
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
-from datetime import date, datetime
+from datetime import date
 from .models import LeaveRequest
 from .serializers import LeaveRequestSerializer
 from audit.utils import log_action
@@ -52,7 +64,7 @@ class LeaveRequestAPIView(APIView):
             leave_type = request.data.get('leave_type')
             start_date = request.data.get('start_date')
             end_date = request.data.get('end_date')
-            late_until = request.data.get('late_until', None)  # format: "HH:MM"
+            late_until = request.data.get('late_until', None)
 
             leave = LeaveRequest.objects.create(
                 employee=employee,
@@ -65,7 +77,6 @@ class LeaveRequestAPIView(APIView):
             )
             log_action(request, 'LEAVE_CREATE', 'LeaveRequest', leave.id, detail={'leave_type': leave.leave_type})
 
-            # Berikan warning ke karyawan jika pengajuan mepet
             warning = get_urgency_warning(str(start_date))
             message = 'Berhasil diajukan! Menunggu persetujuan HR.'
             if warning:
@@ -80,13 +91,15 @@ class LeaveApprovalAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
-        if not (request.user.is_staff or request.user.is_superuser):
-            return Response({'error': 'Hanya HR yang bisa menyetujui!'}, status=status.HTTP_403_FORBIDDEN)
+        """Approve atau Reject pengajuan izin."""
+        is_hr_role = hasattr(request.user, 'employee_profile') and request.user.employee_profile.role and 'hr' in request.user.employee_profile.role.lower()
+        if not (request.user.is_staff or request.user.is_superuser or is_hr_role):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Hanya HR yang bisa menyetujui!')
 
         try:
             leave = LeaveRequest.objects.get(pk=pk)
             action = request.data.get('action')
-
             signed_file = request.FILES.get('signed_attachment', None)
 
             if action == 'APPROVE':
@@ -105,3 +118,36 @@ class LeaveApprovalAPIView(APIView):
             return Response({'message': f'Pengajuan berhasil di-{action.lower()}!'})
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request, pk):
+        """
+        Update late_until untuk IZIN_TERLAMBAT oleh HR.
+        Body: { "late_until": "09:30" }
+        """
+        is_hr_role = hasattr(request.user, 'employee_profile') and request.user.employee_profile.role and 'hr' in request.user.employee_profile.role.lower()
+        if not (request.user.is_staff or request.user.is_superuser or is_hr_role):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Hanya HR yang bisa mengubah jam izin terlambat.')
+
+        try:
+            leave = LeaveRequest.objects.get(pk=pk)
+        except LeaveRequest.DoesNotExist:
+            return Response({'error': 'Pengajuan tidak ditemukan.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if leave.leave_type != 'IZIN_TERLAMBAT':
+            return Response({'error': 'Hanya izin terlambat yang bisa diubah jam-nya.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        late_until = request.data.get('late_until')
+        if not late_until:
+            return Response({'error': 'Field late_until wajib diisi (format: HH:MM).'}, status=status.HTTP_400_BAD_REQUEST)
+
+        leave.late_until = late_until
+        leave.save(update_fields=['late_until'])
+
+        log_action(request, 'LEAVE_UPDATE_LATE_UNTIL', 'LeaveRequest', leave.id,
+                   detail={'late_until': str(late_until)})
+
+        return Response({
+            'message': f'Jam izin terlambat berhasil diperbarui menjadi {late_until}.',
+            'late_until': str(late_until),
+        })

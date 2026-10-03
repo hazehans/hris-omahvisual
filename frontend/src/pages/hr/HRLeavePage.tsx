@@ -74,6 +74,25 @@ export function HRLeavePage() {
     }
   }
 
+  // ── Edit late_until ──────────────────────────────────────────────────────
+  const [editLateUntilId, setEditLateUntilId] = useState<string | null>(null)
+  const [editLateUntilVal, setEditLateUntilVal] = useState('')
+  const [editLateLoading, setEditLateLoading] = useState(false)
+
+  async function handleUpdateLateUntil(leaveId: string) {
+    if (!editLateUntilVal) return
+    setEditLateLoading(true)
+    try {
+      await leaveService.updateLateUntil(leaveId, editLateUntilVal)
+      setEditLateUntilId(null)
+      void fetchLeaves()
+    } catch (err: unknown) {
+      alert((err as Error).message)
+    } finally {
+      setEditLateLoading(false)
+    }
+  }
+
   const mediaBase = API_BASE.replace('/api/v1', '')
 
   const filtered = leaves.filter(l => {
@@ -166,6 +185,7 @@ export function HRLeavePage() {
                   <th>Tgl Diajukan</th>
                   <th>Periode</th>
                   <th>Alasan</th>
+                  {tab === 'PENDING' && <th>Urgensi</th>}
                   {tab === 'PENDING' && <th>Lampiran</th>}
                   <th>{tab === 'PENDING' ? 'Aksi' : 'Status'}</th>
                   {tab === 'HISTORY' && <th>Dokumen HR</th>}
@@ -174,19 +194,92 @@ export function HRLeavePage() {
               <tbody>
                 {currentLeaves.map((l: any) => {
                   const created = new Date(l.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                  // Hitung urgency dari start_date
+                  const startDate = new Date(l.start_date)
+                  const today    = new Date(); today.setHours(0,0,0,0)
+                  const diffDays = Math.round((startDate.getTime() - today.getTime()) / 86_400_000)
+                  const isH0 = diffDays === 0
+                  const isH1 = diffDays === 1
+
                   return (
                     <tr key={l.id}>
                       <td className={styles.nameCell}>
                         <div>{l.employee_name}</div>
                         <div style={{ fontSize: '0.7rem', opacity: 0.5, fontFamily: 'monospace' }}>{l.employee_nik}</div>
                       </td>
-                      <td><Badge tone={LEAVE_BADGE[l.leave_type] ?? 'neutral'}>{l.leave_type}</Badge></td>
+                      <td>
+                        <div><Badge tone={LEAVE_BADGE[l.leave_type] ?? 'neutral'}>{l.leave_type}</Badge></div>
+                        {/* Izin Terlambat — tampilkan & edit jam */}
+                        {l.leave_type === 'IZIN_TERLAMBAT' && (
+                          <div style={{ marginTop: '0.25rem', fontSize: '0.72rem' }}>
+                            {editLateUntilId === l.id ? (
+                              <span style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                                <input
+                                  type="time"
+                                  defaultValue={l.late_until ?? ''}
+                                  onChange={e => setEditLateUntilVal(e.target.value)}
+                                  style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', borderRadius: '0.3rem', padding: '0.1rem 0.3rem', fontSize: '0.72rem', colorScheme: 'dark' }}
+                                />
+                                <button
+                                  onClick={() => void handleUpdateLateUntil(l.id)}
+                                  disabled={editLateLoading}
+                                  style={{ background: '#6c63ff', border: 'none', color: '#fff', borderRadius: '0.3rem', padding: '0.1rem 0.4rem', fontSize: '0.72rem', cursor: 'pointer' }}
+                                >✓</button>
+                                <button
+                                  onClick={() => setEditLateUntilId(null)}
+                                  style={{ background: 'none', border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.5)', borderRadius: '0.3rem', padding: '0.1rem 0.4rem', fontSize: '0.72rem', cursor: 'pointer' }}
+                                >✕</button>
+                              </span>
+                            ) : (
+                              <span
+                                onClick={() => { setEditLateUntilId(l.id); setEditLateUntilVal(l.late_until ?? '') }}
+                                title="Klik untuk ubah jam"
+                                style={{ color: '#ffd60a', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                              >
+                                ⏰ s.d. {l.late_until ?? '?'} <span style={{ opacity: 0.5 }}>✏️</span>
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </td>
                       <td className={styles.mono} style={{ fontSize: '0.75rem', opacity: 0.7 }}>{created}</td>
                       <td className={styles.mono} style={{ whiteSpace: 'nowrap' }}>
                         <div>{l.start_date}</div>
                         <div style={{ fontSize: '0.7rem', opacity: 0.5 }}>s.d. {l.end_date}</div>
                       </td>
                       <td style={{ maxWidth: 200, fontSize: '0.8125rem' }}>{l.reason}</td>
+
+                      {/* Kolom Urgensi — H-0/H-1 badge */}
+                      {tab === 'PENDING' && (
+                        <td>
+                          {isH0 ? (
+                            <Badge tone="danger">H-0 ⚠️</Badge>
+                          ) : isH1 ? (
+                            <Badge tone="warn">H-1 ⚠️</Badge>
+                          ) : (
+                            <span style={{ opacity: 0.3, fontSize: '0.75rem' }}>—</span>
+                          )}
+                          {l.urgency_warning && (
+                              <div style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.25rem',
+                                backgroundColor: 'rgba(255, 214, 10, 0.1)',
+                                color: '#FFD60A',
+                                border: '1px solid rgba(255, 214, 10, 0.3)',
+                                borderRadius: '12px',
+                                padding: '0.15rem 0.5rem',
+                                fontSize: '0.65rem',
+                                fontWeight: 600,
+                                marginTop: '0.35rem',
+                                whiteSpace: 'nowrap'
+                              }}>
+                                🟡 {l.urgency_warning}
+                              </div>
+                            )}
+                        </td>
+                      )}
+
                       {tab === 'PENDING' && (
                         <td>
                           {l.attachment

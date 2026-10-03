@@ -6,7 +6,6 @@ import {
   useRef,
   useState,
   type ReactNode,
-  type HTMLAttributes,
   type ButtonHTMLAttributes,
   cloneElement,
   isValidElement,
@@ -187,11 +186,11 @@ export function GlassDropdown({
       id: triggerId,
       onClick: (e: any) => {
         toggle()
-        if (trigger.props.onClick) trigger.props.onClick(e)
+        if ((trigger.props as any).onClick) (trigger.props as any).onClick(e)
       },
       'aria-haspopup': 'menu',
       'aria-expanded': open,
-      disabled: disabled || trigger.props.disabled,
+      disabled: disabled || (trigger.props as any).disabled,
     })
   } else {
     triggerElement = (

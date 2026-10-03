@@ -50,7 +50,17 @@ export const leaveService = {
 
   /** Build absolute URL for attachment (served by Django media) */
   getAttachmentUrl(relativePath: string): string {
-    // relativePath from backend: e.g. "/media/leave_attachments/file.pdf"
     return `${API_BASE.replace('/api/v1', '')}${relativePath}`
+  },
+
+  /**
+   * PATCH /api/v1/leave/<uuid>/approve/
+   * HR update jam izin terlambat. Body: { late_until: "HH:MM" }
+   */
+  updateLateUntil(id: string, lateUntil: string): Promise<{ message: string; late_until: string }> {
+    return apiRequest<{ message: string; late_until: string }>(`/leave/${id}/approve/`, {
+      method: 'PATCH',
+      body: { late_until: lateUntil },
+    })
   },
 }
