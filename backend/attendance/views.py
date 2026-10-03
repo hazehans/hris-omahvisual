@@ -66,14 +66,27 @@ class TodayAttendanceView(APIView):
                 if entry['last_out'] is None or log.event_time > entry['last_out']:
                     entry['last_out'] = log.event_time
         
-        # Calculate is_late
-        late_threshold = time(WORK_START_HOUR, LATE_THRESHOLD_MINUTES)
+        # Calculate is_late based on threshold and Leave permissions
+        from leave.models import LeaveRequest
+        approved_late_leaves = LeaveRequest.objects.filter(
+            start_date=target_date, 
+            leave_type='IZIN_TERLAMBAT', 
+            status='APPROVED'
+        )
+        late_exempt_map = {
+            leave.employee_id: leave.late_until 
+            for leave in approved_late_leaves
+        }
+
+        default_late_threshold = time(WORK_START_HOUR, LATE_THRESHOLD_MINUTES)
         result = []
         for entry in employee_data.values():
             is_late = False
+            emp_id = entry['employee_id']
             if entry['first_in']:
                 local_time = timezone.localtime(entry['first_in']).time()
-                is_late = local_time > late_threshold
+                current_threshold = late_exempt_map.get(emp_id) or default_late_threshold
+                is_late = local_time > current_threshold
                 entry['first_in'] = entry['first_in'].isoformat()
             if entry['last_out']:
                 entry['last_out'] = entry['last_out'].isoformat()
@@ -615,7 +628,9 @@ class ExportAttendancePDFView(APIView):
             out_log = AttendanceLog.objects.filter(employee=log.employee, attendance_date=target_date, attendance_type='OUT').order_by('-event_time').first()
             last_out = timezone.localtime(out_log.event_time).strftime('%H:%M') if out_log else '-'
             
-            late_time = time(8, 0)
+            from leave.models import LeaveRequest
+            approved_late = LeaveRequest.objects.filter(employee=log.employee, start_date=target_date, leave_type='IZIN_TERLAMBAT', status='APPROVED').first()
+            late_time = approved_late.late_until if approved_late and approved_late.late_until else time(8, 0)
             status = 'Terlambat' if timezone.localtime(log.event_time).time() > late_time else 'Tepat Waktu'
             data.append([
                 log.employee.nik,
