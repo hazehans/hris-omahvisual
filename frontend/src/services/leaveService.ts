@@ -23,6 +23,9 @@ export const leaveService = {
     form.append('start_date', payload.start_date)
     form.append('end_date', payload.end_date)
     form.append('reason', payload.reason)
+    if (payload.late_until) {
+      form.append('late_until', payload.late_until)
+    }
     if (payload.attachment) {
       form.append('attachment', payload.attachment)
     }

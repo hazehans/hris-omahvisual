@@ -45,9 +45,10 @@ export function EmployeeLeavePage() {
     setFormSuccess(null)
     try {
       const payload: LeaveCreatePayload = {
-        leave_type: form.leave_type as 'CUTI' | 'IZIN' | 'SAKIT',
+        leave_type: form.leave_type as 'CUTI' | 'IZIN' | 'SAKIT' | 'IZIN_TERLAMBAT',
         start_date: form.start_date!,
         end_date: form.end_date!,
+        late_until: (form as any).late_until || undefined,
         reason: form.reason!,
         attachment: attachment || undefined
       }
@@ -86,10 +87,17 @@ export function EmployeeLeavePage() {
             <label className={styles.label}>
               Jenis Pengajuan *
               <select
-                className={styles.input}
-                value={form.leave_type}
-                onChange={e => setForm(f => ({ ...f, leave_type: e.target.value as any }))}
-              >
+                  className={styles.input}
+                  value={form.leave_type}
+                  onChange={e => {
+                    const val = e.target.value as any;
+                    setForm(f => ({ 
+                      ...f, 
+                      leave_type: val,
+                      ...(val === 'IZIN_TERLAMBAT' ? { end_date: f.start_date } : {})
+                    }));
+                  }}
+                >
                 <option value="CUTI">Cuti Tahunan</option>
                 <option value="IZIN">Izin Keperluan</option>
                 <option value="SAKIT">Sakit</option>
@@ -97,25 +105,35 @@ export function EmployeeLeavePage() {
               </select>
             </label>
             <label className={styles.label}>
-              Mulai Tanggal *
-              <input 
-                required 
-                type="date"
-                className={styles.input} 
-                value={form.start_date} 
-                onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))}
-              />
-            </label>
-            <label className={styles.label}>
-              Sampai Tanggal *
-              <input 
-                required 
-                type="date"
-                className={styles.input} 
-                value={form.end_date} 
-                onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))}
-              />
-            </label>
+                {form.leave_type === 'IZIN_TERLAMBAT' ? 'Tanggal *' : 'Mulai Tanggal *'}
+                <input 
+                  required 
+                  type="date"
+                  className={styles.input} 
+                  value={form.start_date} 
+                  onChange={e => {
+                    const val = e.target.value;
+                    setForm(f => ({ 
+                      ...f, 
+                      start_date: val, 
+                      ...(f.leave_type === 'IZIN_TERLAMBAT' ? { end_date: val } : {}) 
+                    }));
+                  }}
+                />
+              </label>
+              
+              {form.leave_type !== 'IZIN_TERLAMBAT' && (
+                <label className={styles.label}>
+                  Sampai Tanggal *
+                  <input 
+                    required 
+                    type="date"
+                    className={styles.input} 
+                    value={form.end_date} 
+                    onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))}
+                  />
+                </label>
+              )}
             {/* Kondisional: hanya muncul saat Izin Terlambat */}
             {form.leave_type === 'IZIN_TERLAMBAT' && (
               <label className={styles.label} style={{ gridColumn: '1 / -1' }}>
